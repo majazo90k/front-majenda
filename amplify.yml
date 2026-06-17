@@ -7,6 +7,7 @@ frontend:
     build:
       commands:
         - npm run build
+        - cp dist/front-majenda/browser/index.csr.html dist/front-majenda/browser/index.html
   artifacts:
     baseDirectory: dist/front-majenda/browser
     files:
