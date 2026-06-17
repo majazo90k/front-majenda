@@ -1,0 +1,53 @@
+@use '@angular/material' as mat;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  @include mat.theme((
+    color: (
+      theme-type: light,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: #f9fafb;
+  color: #1f2937;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.mat-mdc-card {
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  h1 { font-size: 1.35rem; }
+  h2 { font-size: 1.15rem; }
+  .hide-mobile { display: none !important; }
+}
