@@ -29,7 +29,7 @@ import { AuthService } from '../../../core/services/auth.service';
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Correo electrónico</mat-label>
-              <input matInput type="email" formControlName="email" placeholder="admin@majenda.cl" autocomplete="email">
+              <input matInput type="email" formControlName="email" placeholder="correo@ejemplo.cl" autocomplete="email">
               <mat-icon matSuffix>email</mat-icon>
               <mat-error *ngIf="form.get('email')?.hasError('required')">El correo es requerido</mat-error>
               <mat-error *ngIf="form.get('email')?.hasError('email')">Correo inválido</mat-error>
@@ -87,8 +87,8 @@ export class LoginComponent {
   private router = inject(Router);
 
   form = this.fb.nonNullable.group({
-    email: ['admin@majenda.cl', [Validators.required, Validators.email]],
-    password: ['admin123', [Validators.required]],
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required]],
   });
 
   loading = false;

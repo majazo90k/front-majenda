@@ -112,16 +112,21 @@ export class ConfiguracionComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.configService.getConfig().subscribe((cfg: any) => {
-      this.form.patchValue({
-        businessName: cfg.businessName || '',
-        businessAddress: cfg.businessAddress || '',
-        businessPhone: cfg.businessPhone || '',
-        businessEmail: cfg.businessEmail || '',
-        slotDurationMinutes: cfg.slotDurationMinutes || 30,
-        daysAdvanceBooking: cfg.daysAdvanceBooking || 30,
-      });
-      this.loading.set(false);
+    this.configService.getConfig().subscribe({
+      next: (cfg: any) => {
+        this.form.patchValue({
+          businessName: cfg.businessName || '',
+          businessAddress: cfg.businessAddress || '',
+          businessPhone: cfg.businessPhone || '',
+          businessEmail: cfg.businessEmail || '',
+          slotDurationMinutes: cfg.slotDurationMinutes || 30,
+          daysAdvanceBooking: cfg.daysAdvanceBooking || 30,
+        });
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+      },
     });
   }
 
