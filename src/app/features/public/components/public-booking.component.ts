@@ -222,7 +222,7 @@ export class PublicBookingComponent {
     const b = this.booking();
     if (!b.service || !b.staff || !b.slot || !b.client) return;
 
-    const startStr = new Date(b.slot.start).toISOString();
+    const startStr = new Date((b.slot.start.endsWith('Z') ? b.slot.start : b.slot.start + 'Z')).toISOString();
 
     this.api.post('/appointments', {
       clientName: b.client.name,

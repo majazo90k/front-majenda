@@ -85,7 +85,8 @@ export class TimeSlotPickerComponent {
   @Output() slotSelected = new EventEmitter<TimeSlot>();
 
   get groups(): SlotGroup[] {
-    const h = (slot: TimeSlot) => new Date(slot.start).getHours();
+    const parseDate = (s: string) => new Date(s.endsWith('Z') ? s : s + 'Z');
+    const h = (slot: TimeSlot) => parseDate(slot.start).getHours();
     const morning = this.slots.filter((s) => h(s) < 12);
     const afternoon = this.slots.filter((s) => h(s) >= 12 && h(s) < 18);
     const evening = this.slots.filter((s) => h(s) >= 18);
