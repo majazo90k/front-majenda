@@ -1,11 +1,19 @@
-export type ServiceCategory = 'corte' | 'tintura' | 'promocion';
+export type ServiceCategory = 'CORTE' | 'TINTURA' | 'PROMOCION';
 
 export interface ServiceModel {
   id: string;
   name: string;
-  duration: number;
-  price: number;
   description: string;
-  isActive: boolean;
+  durationMinutes: number;
+  priceCLP: number;
+  category: ServiceCategory;
+  active: boolean;
+}
+
+export interface CreateServiceRequest {
+  name: string;
+  description?: string;
+  durationMinutes: number;
+  priceCLP: number;
   category: ServiceCategory;
 }

@@ -1,40 +1,38 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { Staff } from '../models';
-import { MOCK_STAFF } from './mock-data';
+import { Observable } from 'rxjs';
+import { Staff, CreateStaffRequest } from '../models';
+import { ApiService } from './api.service';
 
 @Injectable({ providedIn: 'root' })
 export class StaffService {
+
+  constructor(private api: ApiService) {}
+
   getAll(): Observable<Staff[]> {
-    return of(MOCK_STAFF).pipe(delay(200));
+    return this.api.get<Staff[]>('/staff');
   }
 
-  getById(id: string): Observable<Staff | undefined> {
-    return of(MOCK_STAFF.find((s) => s.id === id)).pipe(delay(100));
+  getById(id: string): Observable<Staff> {
+    return this.api.get<Staff>(`/staff/${id}`);
   }
 
-  create(staff: Omit<Staff, 'id'>): Observable<Staff> {
-    const created: Staff = { ...staff, id: crypto.randomUUID() };
-    MOCK_STAFF.push(created);
-    return of(created).pipe(delay(300));
+  create(request: CreateStaffRequest): Observable<Staff> {
+    return this.api.post<Staff>('/staff', request);
   }
 
-  update(id: string, data: Partial<Staff>): Observable<Staff | undefined> {
-    const index = MOCK_STAFF.findIndex((s) => s.id === id);
-    if (index !== -1) {
-      MOCK_STAFF[index] = { ...MOCK_STAFF[index], ...data };
-      return of(MOCK_STAFF[index]).pipe(delay(200));
-    }
-    return of(undefined).pipe(delay(200));
+  activate(id: string): Observable<Staff> {
+    return this.api.patch<Staff>(`/staff/${id}/activate`, {});
   }
 
-  delete(id: string): Observable<boolean> {
-    const index = MOCK_STAFF.findIndex((s) => s.id === id);
-    if (index !== -1) {
-      MOCK_STAFF.splice(index, 1);
-      return of(true).pipe(delay(200));
-    }
-    return of(false).pipe(delay(200));
+  deactivate(id: string): Observable<Staff> {
+    return this.api.patch<Staff>(`/staff/${id}/deactivate`, {});
+  }
+
+  updateSchedule(id: string, schedule: Record<string, { open: string; close: string }[]>): Observable<Staff> {
+    return this.api.patch<Staff>(`/staff/${id}/schedule`, schedule);
+  }
+
+  delete(id: string): Observable<void> {
+    return this.api.delete<void>(`/staff/${id}`);
   }
 }

@@ -3,20 +3,24 @@ import { NgFor, NgIf } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { StaffService } from '../../../../core/services/staff.service';
 import { Staff } from '../../../../core/models';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state.component';
 import { PersonalFormComponent } from './personal-form.component';
+import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog.component';
+import { StaffScheduleEditorComponent } from './staff-schedule-editor.component';
 
 @Component({
   selector: 'app-personal',
   standalone: true,
   imports: [
     NgFor, NgIf,
-    MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
-    LoadingSpinnerComponent, EmptyStateComponent, PersonalFormComponent,
+    MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    LoadingSpinnerComponent, EmptyStateComponent, PersonalFormComponent, StaffScheduleEditorComponent,
   ],
   template: `
     <div class="personal">
@@ -38,7 +42,6 @@ import { PersonalFormComponent } from './personal-form.component';
 
       <app-personal-form
         *ngIf="showForm()"
-        [staff]="editingStaff()"
         (saved)="onSaved($event)"
         (cancelled)="cancelForm()"
       ></app-personal-form>
@@ -48,37 +51,35 @@ import { PersonalFormComponent } from './personal-form.component';
           <mat-card-header>
             <mat-icon mat-card-avatar>person</mat-icon>
             <mat-card-title>{{ s.name }}</mat-card-title>
+            <mat-card-subtitle>{{ s.role }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p class="section-label">Servicios:</p>
-            <div class="chip-group">
-              <mat-chip *ngFor="let svc of s.services">{{ getServiceName(svc) }}</mat-chip>
-            </div>
+            <p class="info-line"><strong>Email:</strong> {{ s.email }}</p>
+            <p class="info-line"><strong>Teléfono:</strong> {{ s.phone }}</p>
+            <p class="info-line">
+              <span class="status-badge" [class.active]="s.active" [class.inactive]="!s.active">
+                {{ s.active ? 'Activo' : 'Inactivo' }}
+              </span>
+            </p>
           </mat-card-content>
           <mat-card-actions align="end">
-            <button mat-icon-button color="primary" (click)="editStaff(s)"><mat-icon>edit</mat-icon></button>
-            <button mat-icon-button color="warn" (click)="deleteStaff(s.id)"><mat-icon>delete</mat-icon></button>
+            <button mat-icon-button color="primary" (click)="editSchedule(s)" matTooltip="Horario"><mat-icon>schedule</mat-icon></button>
+            <button mat-icon-button color="primary" *ngIf="!s.active" (click)="activateStaff(s)" matTooltip="Activar"><mat-icon>person_add</mat-icon></button>
+            <button mat-icon-button color="warn" *ngIf="s.active" (click)="deactivateStaff(s)" matTooltip="Desactivar"><mat-icon>block</mat-icon></button>
+            <button mat-icon-button color="warn" (click)="deleteStaff(s)" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
           </mat-card-actions>
         </mat-card>
       </div>
     </div>
   `,
   styles: [`
-    .personal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-    }
+    .personal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
     .personal-header h1 { margin: 0; }
-    .staff-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1rem;
-    }
-    .section-label { font-weight: 500; font-size: 0.875rem; margin: 0.5rem 0 0.25rem; }
-    .chip-group { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-
+    .staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+    .info-line { margin: 0.25rem 0; font-size: 0.875rem; }
+    .status-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .status-badge.active { background: #d1fae5; color: #065f46; }
+    .status-badge.inactive { background: #fee2e2; color: #991b1b; }
     @media (max-width: 600px) {
       .personal-header { flex-direction: column; gap: 0.75rem; align-items: stretch; }
       .personal-header h1 { text-align: center; }
@@ -88,23 +89,13 @@ import { PersonalFormComponent } from './personal-form.component';
   `],
 })
 export class PersonalComponent implements OnInit {
-  private staffService!: StaffService;
+  private staffService = inject(StaffService);
+  private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   staffList = signal<Staff[]>([]);
   loading = signal(true);
   showForm = signal(false);
-  editingStaff = signal<Staff | undefined>(undefined);
-
-  private readonly serviceNames: Record<string, string> = {
-    'srv-1': 'Corte de cabello',
-    'srv-2': 'Corte + Barba',
-    'srv-3': 'Barba',
-    'srv-4': 'Corte infantil',
-  };
-
-  constructor() {
-    this.staffService = inject(StaffService);
-  }
 
   ngOnInit(): void {
     this.loadStaff();
@@ -117,29 +108,64 @@ export class PersonalComponent implements OnInit {
     });
   }
 
-  getServiceName(id: string): string {
-    return this.serviceNames[id] || id;
-  }
-
-  editStaff(staff: Staff): void {
-    this.editingStaff.set(staff);
-    this.showForm.set(true);
-  }
-
   cancelForm(): void {
     this.showForm.set(false);
-    this.editingStaff.set(undefined);
   }
 
   onSaved(_staff: Staff): void {
     this.cancelForm();
+    this.snackBar.open('Profesional creado correctamente', 'Cerrar', { duration: 3000 });
     this.loading.set(true);
     this.loadStaff();
   }
 
-  deleteStaff(id: string): void {
-    if (confirm('¿Eliminar este profesional?')) {
-      this.staffService.delete(id).subscribe(() => this.loadStaff());
-    }
+  editSchedule(staff: Staff): void {
+    this.dialog.open(StaffScheduleEditorComponent, {
+      data: staff,
+      width: '500px',
+    }).afterClosed().subscribe((changed) => {
+      if (changed) this.loadStaff();
+    });
+  }
+
+  activateStaff(staff: Staff): void {
+    this.staffService.activate(staff.id).subscribe(() => {
+      this.snackBar.open('Profesional activado', 'Cerrar', { duration: 3000 });
+      this.loadStaff();
+    });
+  }
+
+  deactivateStaff(staff: Staff): void {
+    this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Desactivar profesional',
+        message: `¿Estás seguro de desactivar a "${staff.name}"?`,
+        confirmText: 'Desactivar',
+        cancelText: 'Cancelar',
+      },
+    }).afterClosed().subscribe((confirmed) => {
+      if (!confirmed) return;
+      this.staffService.deactivate(staff.id).subscribe(() => {
+        this.snackBar.open('Profesional desactivado', 'Cerrar', { duration: 3000 });
+        this.loadStaff();
+      });
+    });
+  }
+
+  deleteStaff(staff: Staff): void {
+    this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Eliminar profesional',
+        message: `¿Estás seguro de eliminar a "${staff.name}"? Esta acción no se puede deshacer.`,
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+      },
+    }).afterClosed().subscribe((confirmed) => {
+      if (!confirmed) return;
+      this.staffService.delete(staff.id).subscribe(() => {
+        this.snackBar.open('Profesional eliminado', 'Cerrar', { duration: 3000 });
+        this.loadStaff();
+      });
+    });
   }
 }

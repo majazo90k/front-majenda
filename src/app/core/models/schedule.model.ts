@@ -7,16 +7,3 @@ export interface DaySchedule {
 export interface WeekSchedule {
   [dayOfWeek: number]: DaySchedule;
 }
-
-export interface BlockedRange {
-  id: string;
-  start: string;
-  end: string;
-  reason: string;
-}
-
-export interface Holiday {
-  id: string;
-  date: string;
-  description: string;
-}

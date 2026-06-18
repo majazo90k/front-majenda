@@ -6,7 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { ServiceService } from '../../../../core/services/service.service';
-import { ServiceModel, ServiceCategory } from '../../../../core/models';
+import { ServiceModel, ServiceCategory, CreateServiceRequest } from '../../../../core/models';
 
 @Component({
   selector: 'app-servicio-form',
@@ -32,20 +32,20 @@ import { ServiceModel, ServiceCategory } from '../../../../core/models';
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Categoría</mat-label>
             <mat-select formControlName="category">
-              <mat-option value="corte">Corte</mat-option>
-              <mat-option value="tintura">Tintura</mat-option>
-              <mat-option value="promocion">Promoción</mat-option>
+              <mat-option value="CORTE">Corte</mat-option>
+              <mat-option value="TINTURA">Tintura</mat-option>
+              <mat-option value="PROMOCION">Promoción</mat-option>
             </mat-select>
           </mat-form-field>
 
           <div class="row">
             <mat-form-field appearance="outline">
               <mat-label>Duración (min)</mat-label>
-              <input matInput type="number" formControlName="duration">
+              <input matInput type="number" formControlName="durationMinutes">
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Precio ($)</mat-label>
-              <input matInput type="number" formControlName="price">
+              <input matInput type="number" formControlName="priceCLP">
             </mat-form-field>
           </div>
 
@@ -64,7 +64,6 @@ import { ServiceModel, ServiceCategory } from '../../../../core/models';
     .full-width { width: 100%; }
     .row { display: flex; gap: 1rem; }
     .form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
-
     @media (max-width: 600px) {
       .row { flex-direction: column; gap: 0; }
       .form-actions { flex-direction: column-reverse; }
@@ -73,30 +72,30 @@ import { ServiceModel, ServiceCategory } from '../../../../core/models';
   `],
 })
 export class ServicioFormComponent implements OnInit {
-  private fb!: FormBuilder;
-  private serviceService!: ServiceService;
+  private fb = inject(FormBuilder);
+  private serviceService = inject(ServiceService);
 
   @Input() service?: ServiceModel;
   @Output() saved = new EventEmitter<ServiceModel>();
   @Output() cancelled = new EventEmitter<void>();
 
-  form: any;
-
-  constructor() {
-    this.fb = inject(FormBuilder);
-    this.serviceService = inject(ServiceService);
-    this.form = this.fb.nonNullable.group({
-      name: ['', Validators.required],
-      description: [''],
-      category: ['corte' as ServiceCategory, Validators.required],
-      duration: [30, [Validators.required, Validators.min(5)]],
-      price: [0, [Validators.required, Validators.min(0)]],
-    });
-  }
+  form = this.fb.nonNullable.group({
+    name: ['', Validators.required],
+    description: [''],
+    category: ['CORTE' as ServiceCategory, Validators.required],
+    durationMinutes: [30, [Validators.required, Validators.min(5)]],
+    priceCLP: [0, [Validators.required, Validators.min(0)]],
+  });
 
   ngOnInit(): void {
     if (this.service) {
-      this.form.patchValue(this.service);
+      this.form.patchValue({
+        name: this.service.name,
+        description: this.service.description,
+        category: this.service.category,
+        durationMinutes: this.service.durationMinutes,
+        priceCLP: this.service.priceCLP,
+      });
     }
   }
 
@@ -104,12 +103,16 @@ export class ServicioFormComponent implements OnInit {
     if (this.form.invalid) return;
     const data = this.form.getRawValue();
 
-    const obs = this.service
-      ? this.serviceService.update(this.service.id, data)
-      : this.serviceService.create({ ...data, isActive: true });
+    const request: CreateServiceRequest = {
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      durationMinutes: data.durationMinutes,
+      priceCLP: data.priceCLP,
+    };
 
-    obs.subscribe((result) => {
-      if (result) this.saved.emit(result as ServiceModel);
+    this.serviceService.create(request).subscribe((result) => {
+      this.saved.emit(result);
     });
   }
 }

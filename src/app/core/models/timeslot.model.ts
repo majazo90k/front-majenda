@@ -1,6 +1,6 @@
 export interface TimeSlot {
-  start: Date;
-  end: Date;
-  isAvailable: boolean;
-  isBlocked: boolean;
+  start: string;
+  end: string;
+  isAvailable?: boolean;
+  isBlocked?: boolean;
 }

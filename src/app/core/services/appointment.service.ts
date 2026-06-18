@@ -1,56 +1,33 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { Appointment, AppointmentStatus } from '../models';
-import { MOCK_APPOINTMENTS } from './mock-data';
+import { Observable } from 'rxjs';
+import { Appointment, CreateAppointmentRequest, UpdateStatusRequest } from '../models';
+import { ApiService } from './api.service';
+import { HttpParams } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class AppointmentService {
-  getAll(): Observable<Appointment[]> {
-    return of(MOCK_APPOINTMENTS).pipe(delay(300));
+
+  constructor(private api: ApiService) {}
+
+  getAll(date?: string): Observable<Appointment[]> {
+    const params = date ? new HttpParams().set('date', date) : undefined;
+    return this.api.get<Appointment[]>('/appointments', params);
   }
 
-  getByDate(date: string): Observable<Appointment[]> {
-    const filtered = MOCK_APPOINTMENTS.filter(
-      (a) => a.startTime.startsWith(date)
-    );
-    return of(filtered).pipe(delay(200));
+  getById(id: string): Observable<Appointment> {
+    return this.api.get<Appointment>(`/appointments/${id}`);
   }
 
-  getById(id: string): Observable<Appointment | undefined> {
-    const found = MOCK_APPOINTMENTS.find((a) => a.id === id);
-    return of(found).pipe(delay(150));
+  create(request: CreateAppointmentRequest): Observable<Appointment> {
+    return this.api.post<Appointment>('/appointments', request);
   }
 
-  create(appointment: Omit<Appointment, 'id' | 'createdAt'>): Observable<Appointment> {
-    const created: Appointment = {
-      ...appointment,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    MOCK_APPOINTMENTS.push(created);
-    return of(created).pipe(delay(300));
+  updateStatus(id: string, status: string): Observable<Appointment> {
+    const body: UpdateStatusRequest = { status: status as any };
+    return this.api.patch<Appointment>(`/appointments/${id}/status`, body);
   }
 
-  updateStatus(id: string, status: AppointmentStatus): Observable<Appointment | undefined> {
-    const index = MOCK_APPOINTMENTS.findIndex((a) => a.id === id);
-    if (index !== -1) {
-      MOCK_APPOINTMENTS[index] = { ...MOCK_APPOINTMENTS[index], status };
-      return of(MOCK_APPOINTMENTS[index]).pipe(delay(200));
-    }
-    return of(undefined).pipe(delay(200));
-  }
-
-  reschedule(id: string, startTime: string, endTime: string): Observable<Appointment | undefined> {
-    const index = MOCK_APPOINTMENTS.findIndex((a) => a.id === id);
-    if (index !== -1) {
-      MOCK_APPOINTMENTS[index] = { ...MOCK_APPOINTMENTS[index], startTime, endTime };
-      return of(MOCK_APPOINTMENTS[index]).pipe(delay(200));
-    }
-    return of(undefined).pipe(delay(200));
-  }
-
-  cancel(id: string): Observable<Appointment | undefined> {
-    return this.updateStatus(id, 'cancelled');
+  delete(id: string): Observable<void> {
+    return this.api.delete<void>(`/appointments/${id}`);
   }
 }

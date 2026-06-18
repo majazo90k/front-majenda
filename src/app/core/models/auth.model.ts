@@ -7,11 +7,18 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
-  user: User;
+  email: string;
+  name: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
 }
 
 export interface AuthState {
-  user: User | null;
   token: string | null;
+  email: string | null;
   isAuthenticated: boolean;
 }

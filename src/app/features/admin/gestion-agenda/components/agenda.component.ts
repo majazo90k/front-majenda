@@ -1,12 +1,11 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { NgFor, NgIf, DatePipe, NgClass } from '@angular/common';
+import { NgFor, NgIf, DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppointmentService } from '../../../../core/services/appointment.service';
-import { ServiceService } from '../../../../core/services/service.service';
-import { Appointment, AppointmentStatus, ServiceModel } from '../../../../core/models';
+import { Appointment } from '../../../../core/models';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner.component';
 
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -20,17 +19,10 @@ interface CalendarDay {
   isOtherMonth: boolean;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-amber-400',
-  confirmed: 'bg-indigo-500',
-  completed: 'bg-emerald-500',
-  cancelled: 'bg-rose-400',
-};
-
 @Component({
   selector: 'app-agenda',
   standalone: true,
-  imports: [NgFor, NgIf, DatePipe, NgClass, MatButtonModule, MatIconModule, MatTooltipModule, LoadingSpinnerComponent],
+  imports: [NgFor, NgIf, DatePipe, MatButtonModule, MatIconModule, MatTooltipModule, LoadingSpinnerComponent],
   template: `
     <div class="p-4 md:p-6 space-y-6">
       <div class="flex items-center justify-between">
@@ -104,38 +96,38 @@ const STATUS_COLORS: Record<string, string> = {
                 </div>
 
                 <!-- Color bar -->
-                <div class="w-1 rounded-full flex-shrink-0" [class.bg-amber-400]="apt.status === 'pending'"
-                  [class.bg-indigo-500]="apt.status === 'confirmed'"
-                  [class.bg-emerald-500]="apt.status === 'completed'"
-                  [class.bg-rose-400]="apt.status === 'cancelled'"></div>
+                <div class="w-1 rounded-full flex-shrink-0" [class.bg-amber-400]="apt.status === 'PENDING'"
+                  [class.bg-indigo-500]="apt.status === 'CONFIRMED'"
+                  [class.bg-emerald-500]="apt.status === 'COMPLETED'"
+                  [class.bg-rose-400]="apt.status === 'CANCELLED'"></div>
 
                 <!-- Content -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <span class="font-semibold text-sm text-gray-900 truncate">{{ apt.clientName }}</span>
                     <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
-                      [class.bg-amber-50]="apt.status === 'pending'" [class.text-amber-600]="apt.status === 'pending'"
-                      [class.bg-indigo-50]="apt.status === 'confirmed'" [class.text-indigo-600]="apt.status === 'confirmed'"
-                      [class.bg-emerald-50]="apt.status === 'completed'" [class.text-emerald-600]="apt.status === 'completed'"
-                      [class.bg-rose-50]="apt.status === 'cancelled'" [class.text-rose-600]="apt.status === 'cancelled'">
+                      [class.bg-amber-50]="apt.status === 'PENDING'" [class.text-amber-600]="apt.status === 'PENDING'"
+                      [class.bg-indigo-50]="apt.status === 'CONFIRMED'" [class.text-indigo-600]="apt.status === 'CONFIRMED'"
+                      [class.bg-emerald-50]="apt.status === 'COMPLETED'" [class.text-emerald-600]="apt.status === 'COMPLETED'"
+                      [class.bg-rose-50]="apt.status === 'CANCELLED'" [class.text-rose-600]="apt.status === 'CANCELLED'">
                       {{ statusLabel(apt.status) }}
                     </span>
                   </div>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ getServiceName(apt.serviceId) }} · {{ getStaffName(apt.staffId) }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">{{ apt.serviceName }} · {{ apt.staffName }}</p>
                   <p class="text-xs text-gray-400 truncate">{{ apt.clientPhone }} · {{ apt.clientEmail }}</p>
                 </div>
 
                 <!-- Actions -->
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                  <button mat-icon-button color="primary" matTooltip="Confirmar" *ngIf="apt.status === 'pending'"
-                    class="!w-8 !h-8 !text-emerald-600 hover:bg-emerald-50" (click)="changeStatus(apt.id, 'confirmed')">
+                  <button mat-icon-button color="primary" matTooltip="Confirmar" *ngIf="apt.status === 'PENDING'"
+                    class="!w-8 !h-8 !text-emerald-600 hover:bg-emerald-50" (click)="changeStatus(apt.id, 'CONFIRMED')">
                     <mat-icon class="!text-lg">check_circle</mat-icon>
                   </button>
-                  <button mat-icon-button color="primary" matTooltip="Completar" *ngIf="apt.status === 'confirmed'"
-                    class="!w-8 !h-8 !text-blue-600 hover:bg-blue-50" (click)="changeStatus(apt.id, 'completed')">
+                  <button mat-icon-button color="primary" matTooltip="Completar" *ngIf="apt.status === 'CONFIRMED'"
+                    class="!w-8 !h-8 !text-blue-600 hover:bg-blue-50" (click)="changeStatus(apt.id, 'COMPLETED')">
                     <mat-icon class="!text-lg">task_alt</mat-icon>
                   </button>
-                  <button mat-icon-button matTooltip="Cancelar" *ngIf="apt.status !== 'cancelled' && apt.status !== 'completed'"
+                  <button mat-icon-button matTooltip="Cancelar" *ngIf="apt.status !== 'CANCELLED' && apt.status !== 'COMPLETED'"
                     class="!w-8 !h-8 !text-rose-500 hover:bg-rose-50" (click)="cancelAppointment(apt)">
                     <mat-icon class="!text-lg">cancel</mat-icon>
                   </button>
@@ -150,7 +142,6 @@ const STATUS_COLORS: Record<string, string> = {
 })
 export class AgendaComponent implements OnInit {
   private appointmentService = inject(AppointmentService);
-  private serviceService = inject(ServiceService);
   private snackBar = inject(MatSnackBar);
 
   readonly DAYS = DAYS;
@@ -161,7 +152,6 @@ export class AgendaComponent implements OnInit {
   viewDate = signal(new Date());
   selectedDate = signal(new Date());
   appointments = signal<Appointment[]>([]);
-  services: ServiceModel[] = [];
 
   calendarDays = computed<CalendarDay[]>(() => {
     const year = this.viewDate().getFullYear();
@@ -203,7 +193,6 @@ export class AgendaComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.serviceService.getAll().subscribe((s) => { this.services = s; });
     this.loadAppointments();
   }
 
@@ -230,7 +219,7 @@ export class AgendaComponent implements OnInit {
     if (day.date) this.selectedDate.set(day.date);
   }
 
-  changeStatus(id: string, status: AppointmentStatus): void {
+  changeStatus(id: string, status: string): void {
     this.appointmentService.updateStatus(id, status).subscribe(() => {
       this.loadAppointments();
     });
@@ -239,23 +228,14 @@ export class AgendaComponent implements OnInit {
   cancelAppointment(apt: Appointment): void {
     const confirmed = confirm(`¿Cancelar cita de ${apt.clientName}?\nTe recomendamos enviar un WhatsApp al ${apt.clientPhone} para notificarle.`);
     if (!confirmed) return;
-    this.appointmentService.updateStatus(apt.id, 'cancelled').subscribe(() => {
+    this.appointmentService.updateStatus(apt.id, 'CANCELLED').subscribe(() => {
       this.snackBar.open(`Cita cancelada · ${apt.clientName}`, 'Cerrar', { duration: 3000 });
       this.loadAppointments();
     });
   }
 
-  getServiceName(id: string): string {
-    return this.services.find((s) => s.id === id)?.name || id;
-  }
-
-  getStaffName(id: string): string {
-    const names: Record<string, string> = { 'stf-1': 'Carlos Muñoz', 'stf-2': 'María González' };
-    return names[id] || id;
-  }
-
   statusLabel(s: string): string {
-    const map: Record<string, string> = { pending: 'Pendiente', confirmed: 'Confirmada', completed: 'Completada', cancelled: 'Cancelada' };
+    const map: Record<string, string> = { PENDING: 'Pendiente', CONFIRMED: 'Confirmada', COMPLETED: 'Completada', CANCELLED: 'Cancelada' };
     return map[s] || s;
   }
 

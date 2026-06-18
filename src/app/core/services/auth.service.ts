@@ -1,68 +1,72 @@
-import { Injectable, signal, computed, NgZone, inject } from '@angular/core';
-import { Observable, of, throwError, fromEvent, Subscription } from 'rxjs';
-import { delay, tap } from 'rxjs/operators';
-import { User, LoginRequest, LoginResponse, AuthState } from '../models';
+import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Observable, tap } from 'rxjs';
+import { LoginRequest, LoginResponse, AuthState } from '../models';
+import { ApiService } from './api.service';
 
-const SESSION_DURATION = 10 * 60 * 1000;
+const TOKEN_KEY = 'majenda_token';
+const EMAIL_KEY = 'majenda_email';
+const NAME_KEY = 'majenda_name';
+
+function getItem(key: string): string | null {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return localStorage.getItem(key);
+  }
+  return null;
+}
+
+function setItem(key: string, value: string): void {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.setItem(key, value);
+  }
+}
+
+function removeItem(key: string): void {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.removeItem(key);
+  }
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly state = signal<AuthState>({ user: null, token: null, isAuthenticated: false });
-  private ngZone = inject(NgZone);
-  private activitySub: Subscription | null = null;
-  private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly state = signal<AuthState>({
+    token: getItem(TOKEN_KEY),
+    email: getItem(EMAIL_KEY),
+    isAuthenticated: !!getItem(TOKEN_KEY),
+  });
 
-  readonly user = computed(() => this.state().user);
   readonly token = computed(() => this.state().token);
+  readonly email = computed(() => this.state().email);
   readonly isAuthenticated = computed(() => this.state().isAuthenticated);
 
+  readonly user = computed(() => {
+    const e = this.state().email;
+    if (!e) return null;
+    return {
+      email: e,
+      name: getItem(NAME_KEY) || e,
+      role: 'admin' as const,
+      businessName: getItem(NAME_KEY) || 'Mi Negocio',
+    };
+  });
+
+  constructor(private api: ApiService) {}
+
   login(request: LoginRequest): Observable<LoginResponse> {
-    if (request.email === 'admin@test.com' && request.password === '123456') {
-      const response: LoginResponse = {
-        token: 'mock-jwt-token-' + Date.now(),
-        user: {
-          id: '1',
-          email: request.email,
-          name: 'Admin',
-          role: 'admin',
-          businessName: 'Mi Negocio',
-        },
-      };
-      return of(response).pipe(
-        delay(600),
-        tap((res) => {
-          this.state.set({ user: res.user, token: res.token, isAuthenticated: true });
-          this.startSessionTimer();
-        })
-      );
-    }
-    return throwError(() => new Error('Credenciales inválidas'));
+    return this.api.post<LoginResponse>('/auth/login', request).pipe(
+      tap((res) => {
+        setItem(TOKEN_KEY, res.token);
+        setItem(EMAIL_KEY, res.email);
+        setItem(NAME_KEY, res.name);
+        this.state.set({ token: res.token, email: res.email, isAuthenticated: true });
+      })
+    );
   }
 
   logout(): void {
-    this.stopSessionTimer();
-    this.state.set({ user: null, token: null, isAuthenticated: false });
-  }
-
-  private startSessionTimer(): void {
-    this.ngZone.runOutsideAngular(() => {
-      this.activitySub = fromEvent(document, 'mousemove click keydown touchstart scroll').subscribe(() => {
-        this.resetTimer();
-      });
-      this.resetTimer();
-    });
-  }
-
-  private resetTimer(): void {
-    if (this.timeoutId) clearTimeout(this.timeoutId);
-    this.timeoutId = setTimeout(() => {
-      this.ngZone.run(() => this.logout());
-    }, SESSION_DURATION);
-  }
-
-  private stopSessionTimer(): void {
-    if (this.timeoutId) { clearTimeout(this.timeoutId); this.timeoutId = null; }
-    this.activitySub?.unsubscribe();
-    this.activitySub = null;
+    removeItem(TOKEN_KEY);
+    removeItem(EMAIL_KEY);
+    removeItem(NAME_KEY);
+    this.state.set({ token: null, email: null, isAuthenticated: false });
   }
 }
