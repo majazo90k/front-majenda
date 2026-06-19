@@ -16,9 +16,9 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return `${String(h).padStart(2, '0')}:${m}`;
 });
 
-const DAY_LABELS: Record<number, string> = {
-  0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
-  4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
+const DAY_LABELS: Record<string, string> = {
+  MONDAY: 'Lunes', TUESDAY: 'Martes', WEDNESDAY: 'Miércoles',
+  THURSDAY: 'Jueves', FRIDAY: 'Viernes', SATURDAY: 'Sábado', SUNDAY: 'Domingo',
 };
 const DAY_KEYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
@@ -42,7 +42,7 @@ export interface ScheduleData {
         <div class="day-list">
         <div *ngFor="let day of DAY_KEYS; let i = index" class="day-row">
           <mat-slide-toggle [formControlName]="day + '_active'">
-            {{ DAY_LABELS[i] }}
+            {{ DAY_LABELS[day] }}
           </mat-slide-toggle>
 
           <div class="time-selects" *ngIf="form.get(day + '_active')?.value">
@@ -76,8 +76,12 @@ export interface ScheduleData {
     .day-list { max-height: 400px; overflow-y: auto; }
     .day-row { display: flex; align-items: center; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid #f3f4f6; }
     .time-selects { display: flex; gap: 0.5rem; margin-left: auto; }
-    .time-selects mat-form-field { width: 100px; }
+    .time-selects mat-form-field { width: 130px; }
     .actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+    @media (min-width: 1200px) {
+      .time-selects mat-form-field { width: 150px; }
+      .schedule-dialog { min-width: 520px; }
+    }
     @media (max-width: 600px) {
       .schedule-dialog { min-width: unset; padding: 1rem; }
       .day-list { max-height: 300px; }
@@ -108,11 +112,16 @@ export class StaffScheduleEditorComponent {
   }
 
   private buildForm(): void {
+    const schedule = this.staff.schedule || {};
+    const hasAny = DAY_KEYS.some((d) => schedule[d]?.length > 0);
     const group: Record<string, any> = {};
     for (const day of DAY_KEYS) {
-      group[day + '_active'] = [true];
-      group[day + '_open'] = ['09:00'];
-      group[day + '_close'] = ['18:00'];
+      const daySlots = schedule[day];
+      const hasSchedule = daySlots && daySlots.length > 0;
+      const defaultActive = hasAny ? hasSchedule : (day !== 'SATURDAY' && day !== 'SUNDAY');
+      group[day + '_active'] = [defaultActive];
+      group[day + '_open'] = [hasSchedule ? daySlots[0].start : '09:00'];
+      group[day + '_close'] = [hasSchedule ? daySlots[0].end : '18:00'];
     }
     this.form = this.fb.nonNullable.group(group);
   }

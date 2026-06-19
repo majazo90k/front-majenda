@@ -24,6 +24,7 @@ import { BookingData } from './public-booking.component';
           <div class="row" *ngIf="booking.client"><span class="label">Cliente</span><span class="value">{{ booking.client.name }}</span></div>
         </mat-card-content>
         <mat-card-actions align="end">
+          <button mat-stroked-button (click)="cancel.emit()"><mat-icon>close</mat-icon> Cancelar</button>
           <button mat-raised-button color="primary" (click)="confirm.emit()"><mat-icon>check_circle</mat-icon> Confirmar cita</button>
         </mat-card-actions>
       </mat-card>
@@ -55,4 +56,5 @@ export class BookingConfirmationComponent {
   @Input({ required: true }) booking!: BookingData;
   @Input() isConfirmed = false;
   @Output() confirm = new EventEmitter<void>();
+  @Output() cancel = new EventEmitter<void>();
 }

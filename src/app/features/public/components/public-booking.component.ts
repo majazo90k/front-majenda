@@ -1,8 +1,9 @@
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, inject, computed, signal, viewChild } from '@angular/core';
 import { NgIf, NgFor, DecimalPipe } from '@angular/common';
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
 import { ServiceService } from '../../../core/services/service.service';
 import { StaffService } from '../../../core/services/staff.service';
 import { ServiceModel, ServiceCategory, Staff, TimeSlot } from '../../../core/models';
@@ -12,6 +13,7 @@ import { BookingCalendarComponent } from './booking-calendar.component';
 import { TimeSlotPickerComponent } from './time-slot-picker.component';
 import { BookingFormComponent } from './booking-form.component';
 import { BookingConfirmationComponent } from './booking-confirmation.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog.component';
 
 export interface BookingData {
   service?: ServiceModel;
@@ -40,9 +42,17 @@ export interface BookingData {
           <p>Selecciona servicio, elige un horario y confirma en pocos pasos.</p>
         </div>
 
-        <mat-stepper linear #stepper class="booking-stepper">
+        <div *ngIf="confirmedBooking() as confirmed" class="confirmed-banner">
+          <app-booking-confirmation [booking]="confirmed" [isConfirmed]="true"></app-booking-confirmation>
+          <div class="text-center mt-4"><button mat-stroked-button (click)="clearConfirmed()">Agendar nueva cita</button></div>
+        </div>
+
+        <mat-stepper *ngIf="!confirmedBooking()" linear #stepper class="booking-stepper" [attr.data-key]="bookingKey()">
+          <ng-template matStepperIcon="number" let-index="index"><mat-icon class="step-icon">{{ stepIcons[index] }}</mat-icon></ng-template>
+          <ng-template matStepperIcon="edit" let-index="index"><mat-icon class="step-icon">{{ stepIcons[index] }}</mat-icon></ng-template>
+
           <mat-step [completed]="!!booking().service">
-            <ng-template matStepLabel>Servicio</ng-template>
+            <ng-template matStepLabel><span class="step-label-text">Servicio</span></ng-template>
             <div class="step-body">
               <p class="step-title" *ngIf="services().length > 0">¿Qué servicio necesitas?</p>
               <div class="filter-bar" *ngIf="services().length > 0">
@@ -69,7 +79,7 @@ export interface BookingData {
           </mat-step>
 
           <mat-step [completed]="!!booking().staff">
-            <ng-template matStepLabel>Profesional</ng-template>
+            <ng-template matStepLabel><span class="step-label-text">Profesional</span></ng-template>
             <div class="step-body">
               <p class="step-title" *ngIf="staff().length > 0">Elige a tu profesional</p>
               <div class="grid-2cols" *ngIf="staff().length > 0">
@@ -79,43 +89,47 @@ export interface BookingData {
                 </button>
               </div>
               <div class="step-actions step-actions-between">
-                <button mat-button (click)="stepper.previous()">Atrás</button>
+                <button mat-stroked-button (click)="stepper.previous()"><mat-icon>chevron_left</mat-icon> Atrás</button>
                 <button mat-raised-button color="primary" [disabled]="!booking().staff" (click)="nextStep(stepper)">Siguiente <mat-icon>chevron_right</mat-icon></button>
               </div>
             </div>
           </mat-step>
 
           <mat-step [completed]="!!booking().date && !!booking().slot">
-            <ng-template matStepLabel>Fecha y hora</ng-template>
+            <ng-template matStepLabel><span class="step-label-text">Fecha y hora</span></ng-template>
             <div class="step-body">
               <p class="step-title">Elige día y horario</p>
               <app-booking-calendar [selectedDate]="booking().date" (dateSelected)="onDateSelected($event)"></app-booking-calendar>
               <app-time-slot-picker [slots]="availableSlots()" [selectedSlot]="booking().slot" (slotSelected)="selectSlot($event)"></app-time-slot-picker>
               <div class="step-actions step-actions-between">
-                <button mat-button (click)="stepper.previous()">Atrás</button>
-                <button mat-raised-button color="primary" [disabled]="!booking().date || !booking().slot" (click)="nextStep(stepper)">Siguiente <mat-icon>chevron_right</mat-icon></button>
+                <button mat-stroked-button (click)="stepper.previous()"><mat-icon>chevron_left</mat-icon> Atrás</button>
+                <button mat-raised-button color="primary" [disabled]="!booking().date || !booking().slot" (click)="nextStepDate(stepper)">Siguiente <mat-icon>chevron_right</mat-icon></button>
               </div>
             </div>
           </mat-step>
 
           <mat-step [completed]="!!booking().client">
-            <ng-template matStepLabel>Tus datos</ng-template>
+            <ng-template matStepLabel><span class="step-label-text">Tus datos</span></ng-template>
             <div class="step-body">
               <p class="step-title">Completa tus datos</p>
               <app-booking-form (submitted)="onClientSubmit($event, stepper)"></app-booking-form>
               <div class="step-actions">
-                <button mat-button (click)="stepper.previous()">Atrás</button>
+                <button mat-stroked-button (click)="stepper.previous()"><mat-icon>chevron_left</mat-icon> Atrás</button>
               </div>
             </div>
           </mat-step>
 
           <mat-step [editable]="false">
-            <ng-template matStepLabel>Confirmar</ng-template>
+            <ng-template matStepLabel><span class="step-label-text">Confirmar</span></ng-template>
             <div class="step-body">
-              <app-booking-confirmation [booking]="booking()" [isConfirmed]="isConfirmed()" (confirm)="onConfirm()"></app-booking-confirmation>
+              <app-booking-confirmation [booking]="booking()" [isConfirmed]="isConfirmed()" (confirm)="onConfirm()" (cancel)="resetBooking()"></app-booking-confirmation>
             </div>
           </mat-step>
         </mat-stepper>
+
+        <footer class="footer">
+          Majenda - By majazo
+        </footer>
       </div>
     </div>
   `,
@@ -143,18 +157,21 @@ export interface BookingData {
     .filter-chip mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
     .filter-chip.active mat-icon { color: white; }
     .empty-filter { text-align: center; padding: 2rem 1rem; color: #94a3b8; }
+    .footer { text-align: center; padding: 1.5rem 0 0.5rem; font-size: 0.75rem; color: #94a3b8; }
     .step-actions { margin-top: 1.5rem; }
     .step-actions-between { display: flex; justify-content: space-between; align-items: center; }
     @media (max-width: 600px) {
       .hero { padding: 1.5rem 0.5rem 1rem; }
       .hero h1 { font-size: 1.5rem; }
       .hero p { font-size: 0.95rem; }
-      .step-body { padding: 1rem 0.25rem; }
+      .step-body { padding: 1rem 0; }
       .grid-2cols { grid-template-columns: 1fr; }
       .option-card { padding: 1.25rem 0.75rem; }
       .filter-bar { gap: 0.35rem; }
       .filter-chip { padding: 0.25rem 0.75rem; font-size: 0.8rem; }
-      .booking-stepper { margin: 0 -0.5rem; }
+      :host ::ng-deep .booking-stepper .step-label-text { display: none; }
+      :host ::ng-deep .booking-stepper .mat-horizontal-stepper-header { padding: 16px 4px; }
+      :host ::ng-deep .booking-stepper .step-icon { font-size: 18px; width: 18px; height: 18px; }
     }
   `],
 })
@@ -162,6 +179,7 @@ export class PublicBookingComponent {
   private serviceService = inject(ServiceService);
   private staffService = inject(StaffService);
   private api = inject(ApiService);
+  private dialog = inject(MatDialog);
 
   services = signal<ServiceModel[]>([]);
   selectedCategory = signal<ServiceCategory | null>(null);
@@ -172,14 +190,20 @@ export class PublicBookingComponent {
   staff = signal<Staff[]>([]);
   availableSlots = signal<TimeSlot[]>([]);
   isConfirmed = signal(false);
+  private stepperRef = viewChild<MatStepper>('stepper');
+  bookingKey = signal(0);
+
+  stepIcons = ['content_cut', 'person', 'calendar_today', 'edit_note', 'check_circle'];
 
   booking = signal<BookingData>({
     service: undefined,
     staff: undefined,
-    date: null,
+    date: new Date(),
     slot: null,
     client: null,
   });
+
+  confirmedBooking = signal<BookingData | null>(this.loadConfirmed());
 
   constructor() {
     this.serviceService.getActive().subscribe((s) => {
@@ -189,6 +213,7 @@ export class PublicBookingComponent {
     this.staffService.getAll().subscribe((s) => {
       this.staff.set(s);
       if (s.length === 1) this.booking.update((b) => ({ ...b, staff: s[0] }));
+      this.loadSlots(this.booking().date!);
     });
   }
 
@@ -197,10 +222,39 @@ export class PublicBookingComponent {
   }
 
   selectStaff(staff: Staff): void {
-    this.booking.update((b) => ({ ...b, staff }));
+    this.booking.update((b) => ({ ...b, staff, slot: null }));
+    if (this.booking().date) {
+      this.loadSlots(this.booking().date!);
+    }
+  }
+
+  nextStepDate(stepper: MatStepper): void {
+    if (!this.booking().slot) {
+      this.dialog.open(ConfirmDialogComponent, {
+        data: { title: 'Selecciona un horario', message: 'Debes elegir un horario disponible para continuar.', variant: 'warning', confirmText: 'Entendido', cancelText: undefined },
+      });
+    } else {
+      stepper.next();
+    }
   }
 
   nextStep(stepper: MatStepper): void {
+    const b = this.booking();
+    const selectedIndex = stepper.selectedIndex;
+
+    if (selectedIndex === 0 && !b.service) {
+      this.dialog.open(ConfirmDialogComponent, {
+        data: { title: 'Selecciona un servicio', message: 'Debes elegir un servicio para continuar.', variant: 'warning', confirmText: 'Entendido', cancelText: undefined },
+      });
+      return;
+    }
+    if (selectedIndex === 1 && !b.staff) {
+      this.dialog.open(ConfirmDialogComponent, {
+        data: { title: 'Selecciona un profesional', message: 'Debes elegir un profesional para continuar.', variant: 'warning', confirmText: 'Entendido', cancelText: undefined },
+      });
+      return;
+    }
+
     stepper.next();
   }
 
@@ -218,6 +272,13 @@ export class PublicBookingComponent {
     setTimeout(() => stepper.next());
   }
 
+  resetBooking(): void {
+    this.booking.set({ service: undefined, staff: undefined, date: new Date(), slot: null, client: null });
+    this.availableSlots.set([]);
+    this.isConfirmed.set(false);
+    this.stepperRef()?.reset();
+  }
+
   onConfirm(): void {
     const b = this.booking();
     if (!b.service || !b.staff || !b.slot || !b.client) return;
@@ -232,9 +293,40 @@ export class PublicBookingComponent {
       staffId: b.staff.id,
       startTime: startStr,
     }).subscribe({
-      next: () => this.isConfirmed.set(true),
-      error: () => alert('Error al crear la cita. Intenta de nuevo.'),
+      next: () => {
+        this.isConfirmed.set(true);
+        this.saveConfirmed(b);
+      },
+      error: (err: any) => {
+        const isRateLimit = err?.status === 429;
+        const msg = isRateLimit
+          ? 'Ya agendaste una cita hace menos de 5 minutos. Espera un poco antes de agendar otra.'
+          : 'No se pudo agendar la cita. Intenta de nuevo.';
+        this.dialog.open(ConfirmDialogComponent, {
+          data: { title: 'Error', message: msg, icon: 'error_outline', variant: 'danger', confirmText: 'Aceptar', cancelText: undefined },
+        }).afterClosed().subscribe(() => this.resetBooking());
+      },
     });
+  }
+
+  clearConfirmed(): void {
+    localStorage.removeItem('booking_confirmed');
+    this.confirmedBooking.set(null);
+    this.booking.set({ service: undefined, staff: undefined, date: new Date(), slot: null, client: null });
+    this.isConfirmed.set(false);
+  }
+
+  private saveConfirmed(b: BookingData): void {
+    try { localStorage.setItem('booking_confirmed', JSON.stringify(b)); } catch {}
+  }
+
+  private loadConfirmed(): BookingData | null {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return null;
+      const raw = localStorage.getItem('booking_confirmed');
+      if (raw) return JSON.parse(raw) as BookingData;
+    } catch {}
+    return null;
   }
 
   private loadSlots(date: Date): void {

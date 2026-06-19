@@ -79,6 +79,10 @@ export class PhoneInputComponent {
   }
 
   onPhoneChange(): void {
+    const cleaned = (this.phoneCtrl.value || '').replace(/\D/g, '');
+    if (cleaned !== this.phoneCtrl.value) {
+      this.phoneCtrl.setValue(cleaned, { emitEvent: false });
+    }
     this.emitValue();
   }
 }

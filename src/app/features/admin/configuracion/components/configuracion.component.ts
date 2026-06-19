@@ -81,6 +81,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
     </div>
   `,
   styles: [`
+    .config { padding: 0 1.5rem; }
     .config header h1 { margin: 0 0 1.5rem; }
     .hint { color: #6b7280; font-size: 0.875rem; margin: 0; padding: 1rem 0; }
     .row { display: flex; gap: 1rem; flex-wrap: wrap; }
@@ -89,6 +90,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
     .second-card { margin-top: 1rem; }
     .config-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; }
     @media (max-width: 600px) {
+      .config { padding: 0 1rem; }
       .row { flex-direction: column; gap: 0; }
       .row mat-form-field { min-width: 100%; }
       .config-actions button { width: 100%; }

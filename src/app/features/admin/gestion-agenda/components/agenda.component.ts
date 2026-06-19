@@ -4,9 +4,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { AppointmentService } from '../../../../core/services/appointment.service';
 import { Appointment } from '../../../../core/models';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner.component';
+import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog.component';
 
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -33,103 +35,100 @@ interface CalendarDay {
       <app-loading-spinner [loading]="loading()" text="Cargando agenda..." />
 
       <ng-container *ngIf="!loading()">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <!-- Calendar -->
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <!-- Month nav -->
-            <div class="flex items-center justify-between mb-5">
+          <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div class="flex items-center justify-between mb-4">
               <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
-              <h2 class="text-lg font-semibold text-gray-800">{{ MONTHS[viewDate().getMonth()] }} {{ viewDate().getFullYear() }}</h2>
+              <h2 class="text-base font-semibold text-gray-800">{{ MONTHS[viewDate().getMonth()] }} {{ viewDate().getFullYear() }}</h2>
               <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
             </div>
 
-            <!-- Day headers -->
-            <div class="grid grid-cols-7 mb-2">
-              <div *ngFor="let d of DAYS" class="text-center text-xs font-medium text-gray-400 py-1">{{ d }}</div>
+            <div class="grid grid-cols-7 mb-1">
+              <div *ngFor="let d of DAYS" class="text-center text-[10px] font-medium text-gray-400 py-1">{{ d }}</div>
             </div>
 
-            <!-- Calendar grid -->
-            <div class="grid grid-cols-7 gap-1">
+            <div class="grid grid-cols-7 gap-0.5">
               <button *ngFor="let day of calendarDays()"
-                class="relative flex flex-col items-center justify-center rounded-xl p-2 min-h-[56px] transition-all text-sm font-medium
-                  hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                class="relative flex flex-col items-center justify-center rounded-lg p-1 min-h-[40px] transition-all text-xs font-medium
+                  focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                [class.hover:bg-indigo-200]="day.isSelected"
+                [class.hover:bg-gray-50]="!day.isSelected"
                 [class.invisible]="!day.date"
                 [class.text-gray-400]="day.isOtherMonth"
                 [class.text-gray-800]="!day.isOtherMonth && !day.isSelected"
-                [class.bg-indigo-600]="day.isSelected"
-                [class.text-white]="day.isSelected"
+                [class.bg-indigo-100]="day.isSelected"
+                [class.text-indigo-700]="day.isSelected"
                 [class.ring-2]="day.isToday && !day.isSelected"
-                [class.ring-indigo-400]="day.isToday && !day.isSelected"
+                [class.ring-indigo-300]="day.isToday && !day.isSelected"
                 (click)="selectDay(day)"
                 [disabled]="!day.date">
-                <span class="text-sm leading-none">{{ day.date ? day.date.getDate() : '' }}</span>
-                <div *ngIf="day.count > 0" class="flex gap-0.5 mt-1.5">
-                  <span *ngFor="let _ of [].constructor(Math.min(day.count, 4))" class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                  <span *ngIf="day.count > 4" class="text-[10px] leading-none font-bold text-indigo-500">+{{ day.count - 4 }}</span>
+                <span class="text-xs leading-none">{{ day.date ? day.date.getDate() : '' }}</span>
+                <div *ngIf="day.count > 0" class="flex gap-0.5 mt-1">
+                  <span *ngFor="let _ of [].constructor(Math.min(day.count, 3))" class="w-1 h-1 rounded-full bg-indigo-300"></span>
+                  <span *ngIf="day.count > 3" class="text-[9px] leading-none font-bold text-indigo-400">+{{ day.count - 3 }}</span>
                 </div>
               </button>
             </div>
           </div>
 
           <!-- Day schedule -->
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                {{ selectedDate() | date:'fullDate' }}
-              </h3>
-              <span class="text-xs font-medium text-gray-400">{{ dayAppointments().length }} citas</span>
+          <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-gray-500">{{ formatDate(selectedDate()) }}</h3>
+              <span class="text-xs font-medium text-gray-400">{{ dayAppointments().length }} cita{{ dayAppointments().length !== 1 ? 's' : '' }}</span>
             </div>
 
-            <!-- Time slots / timeline -->
-            <div *ngIf="dayAppointments().length === 0" class="text-center py-12">
-              <div class="text-4xl mb-3">📅</div>
+            <div *ngIf="dayAppointments().length === 0" class="text-center py-10">
+              <div class="text-3xl mb-2">📅</div>
               <p class="text-gray-400 text-sm">No hay citas para este día</p>
-              <p class="text-gray-300 text-xs mt-1">Selecciona otro día o crea una nueva cita</p>
             </div>
 
-            <div class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-              <div *ngFor="let apt of dayAppointments()" class="group relative flex gap-3 p-3 rounded-xl transition-all hover:bg-gray-50 border border-transparent hover:border-gray-200">
-                <!-- Time line indicator -->
-                <div class="flex flex-col items-center w-14 flex-shrink-0">
-                  <span class="text-xs font-bold text-gray-700">{{ formatTime(apt.startTime) }}</span>
-                  <span class="text-[10px] text-gray-400 -mt-0.5">{{ formatTime(apt.endTime) }}</span>
+            <div class="space-y-1.5 max-h-[520px] overflow-y-auto pr-1">
+              <div *ngFor="let apt of dayAppointments()"
+                class="flex items-stretch gap-0 rounded-xl overflow-hidden border border-gray-100 bg-white hover:shadow-sm transition-shadow">
+
+                <!-- Time column -->
+                <div class="flex flex-col items-center justify-center w-16 flex-shrink-0 bg-gray-50 py-2">
+                  <span class="text-sm font-bold text-gray-800 leading-tight">{{ formatTime(apt.startTime) }}</span>
+                  <span class="text-[10px] text-gray-400 leading-tight">{{ formatTime(apt.endTime) }}</span>
                 </div>
 
                 <!-- Color bar -->
-                <div class="w-1 rounded-full flex-shrink-0" [class.bg-amber-400]="apt.status === 'PENDING'"
-                  [class.bg-indigo-500]="apt.status === 'CONFIRMED'"
-                  [class.bg-emerald-500]="apt.status === 'COMPLETED'"
-                  [class.bg-rose-400]="apt.status === 'CANCELLED'"></div>
+                <div class="w-1 flex-shrink-0" [class.bg-amber-400]="apt.status === 'PENDING'"
+                  [class.bg-indigo-400]="apt.status === 'CONFIRMED'"
+                  [class.bg-emerald-400]="apt.status === 'COMPLETED'"
+                  [class.bg-rose-300]="apt.status === 'CANCELLED'"></div>
 
                 <!-- Content -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
+                <div class="flex-1 min-w-0 px-3 py-2">
+                  <div class="flex items-center gap-1.5">
                     <span class="font-semibold text-sm text-gray-900 truncate">{{ apt.clientName }}</span>
-                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
-                      [class.bg-amber-50]="apt.status === 'PENDING'" [class.text-amber-600]="apt.status === 'PENDING'"
-                      [class.bg-indigo-50]="apt.status === 'CONFIRMED'" [class.text-indigo-600]="apt.status === 'CONFIRMED'"
-                      [class.bg-emerald-50]="apt.status === 'COMPLETED'" [class.text-emerald-600]="apt.status === 'COMPLETED'"
-                      [class.bg-rose-50]="apt.status === 'CANCELLED'" [class.text-rose-600]="apt.status === 'CANCELLED'">
+                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0"
+                      [class.bg-amber-100]="apt.status === 'PENDING'" [class.text-amber-700]="apt.status === 'PENDING'"
+                      [class.bg-indigo-100]="apt.status === 'CONFIRMED'" [class.text-indigo-700]="apt.status === 'CONFIRMED'"
+                      [class.bg-emerald-100]="apt.status === 'COMPLETED'" [class.text-emerald-700]="apt.status === 'COMPLETED'"
+                      [class.bg-rose-100]="apt.status === 'CANCELLED'" [class.text-rose-600]="apt.status === 'CANCELLED'">
                       {{ statusLabel(apt.status) }}
                     </span>
                   </div>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ apt.serviceName }} · {{ apt.staffName }}</p>
-                  <p class="text-xs text-gray-400 truncate">{{ apt.clientPhone }} · {{ apt.clientEmail }}</p>
+                  <p class="text-[11px] text-gray-500 mt-0.5 truncate">{{ apt.serviceName }} · {{ apt.staffName }}</p>
+                  <p class="text-[11px] text-gray-400 truncate">{{ apt.clientPhone }}</p>
                 </div>
 
-                <!-- Actions -->
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                  <button mat-icon-button color="primary" matTooltip="Confirmar" *ngIf="apt.status === 'PENDING'"
-                    class="!w-8 !h-8 !text-emerald-600 hover:bg-emerald-50" (click)="changeStatus(apt.id, 'CONFIRMED')">
-                    <mat-icon class="!text-lg">check_circle</mat-icon>
+                <!-- Actions always visible -->
+                <div class="flex items-center gap-0.5 pr-2 flex-shrink-0 bg-white">
+                  <button mat-icon-button matTooltip="Confirmar" *ngIf="apt.status === 'PENDING'"
+                    class="!w-7 !h-7 hover:bg-emerald-50" (click)="changeStatus(apt.id, 'CONFIRMED')">
+                    <mat-icon class="!text-base !text-emerald-500">check_circle</mat-icon>
                   </button>
-                  <button mat-icon-button color="primary" matTooltip="Completar" *ngIf="apt.status === 'CONFIRMED'"
-                    class="!w-8 !h-8 !text-blue-600 hover:bg-blue-50" (click)="changeStatus(apt.id, 'COMPLETED')">
-                    <mat-icon class="!text-lg">task_alt</mat-icon>
+                  <button mat-icon-button matTooltip="Completar" *ngIf="apt.status === 'CONFIRMED'"
+                    class="!w-7 !h-7 hover:bg-blue-50" (click)="changeStatus(apt.id, 'COMPLETED')">
+                    <mat-icon class="!text-base !text-blue-500">task_alt</mat-icon>
                   </button>
                   <button mat-icon-button matTooltip="Cancelar" *ngIf="apt.status !== 'CANCELLED' && apt.status !== 'COMPLETED'"
-                    class="!w-8 !h-8 !text-rose-500 hover:bg-rose-50" (click)="cancelAppointment(apt)">
-                    <mat-icon class="!text-lg">cancel</mat-icon>
+                    class="!w-7 !h-7 hover:bg-rose-50" (click)="cancelAppointment(apt)">
+                    <mat-icon class="!text-base !text-rose-400">cancel</mat-icon>
                   </button>
                 </div>
               </div>
@@ -143,6 +142,7 @@ interface CalendarDay {
 export class AgendaComponent implements OnInit {
   private appointmentService = inject(AppointmentService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   readonly DAYS = DAYS;
   readonly MONTHS = MONTHS;
@@ -226,11 +226,21 @@ export class AgendaComponent implements OnInit {
   }
 
   cancelAppointment(apt: Appointment): void {
-    const confirmed = confirm(`¿Cancelar cita de ${apt.clientName}?\nTe recomendamos enviar un WhatsApp al ${apt.clientPhone} para notificarle.`);
-    if (!confirmed) return;
-    this.appointmentService.updateStatus(apt.id, 'CANCELLED').subscribe(() => {
-      this.snackBar.open(`Cita cancelada · ${apt.clientName}`, 'Cerrar', { duration: 3000 });
-      this.loadAppointments();
+    this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Cancelar cita',
+        message: `¿Cancelar la cita de ${apt.clientName}? Te recomendamos enviar un WhatsApp al ${apt.clientPhone} para notificarle.`,
+        confirmText: 'Cancelar cita',
+        cancelText: 'Volver',
+        icon: 'cancel',
+        variant: 'danger',
+      },
+    }).afterClosed().subscribe((result) => {
+      if (!result) return;
+      this.appointmentService.updateStatus(apt.id, 'CANCELLED').subscribe(() => {
+        this.snackBar.open(`Cita cancelada · ${apt.clientName}`, 'Cerrar', { duration: 3000 });
+        this.loadAppointments();
+      });
     });
   }
 
@@ -242,5 +252,9 @@ export class AgendaComponent implements OnInit {
   formatTime(dateStr: string): string {
     const d = new Date(dateStr);
     return d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  formatDate(date: Date): string {
+    return date.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 }

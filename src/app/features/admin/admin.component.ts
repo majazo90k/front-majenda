@@ -1,6 +1,6 @@
 import { Component, inject, signal, HostListener } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
-import { NgFor, NgIf } from '@angular/common';
+import { NgFor, NgIf, NgStyle } from '@angular/common';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
@@ -36,6 +36,9 @@ interface NavItem {
         </button>
         <span class="toolbar-title">{{ businessName }}</span>
         <span class="toolbar-spacer"></span>
+        <span *ngIf="auth.isExpiringSoon()" class="expire-warning">
+          ⏳ Sesión expira en {{ formatTime(auth.expiresIn()) }}
+        </span>
         <button mat-icon-button (click)="confirmLogout()" matTooltip="Cerrar sesión">
           <mat-icon>logout</mat-icon>
         </button>
@@ -77,8 +80,9 @@ interface NavItem {
     .toolbar-title { font-size: 1rem; margin-left: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sidenav-container { margin-top: 64px; height: calc(100vh - 64px); }
     .sidenav { width: 220px; }
-    .content { padding: 1.5rem; }
+    .content { padding: 1.5rem 0; }
     .active { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+    .expire-warning { font-size: 0.8rem; color: #fbbf24; background: rgba(0,0,0,0.2); padding: 0.25rem 0.75rem; border-radius: 999px; white-space: nowrap; }
     .loading-screen {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       min-height: 100vh; gap: 1rem;
@@ -87,18 +91,14 @@ interface NavItem {
     }
     @media (max-width: 768px) {
       .sidenav { width: 240px; }
-      .content { padding: 1rem; }
+      .content { padding: 1rem 0; }
       .sidenav-container { margin-top: 56px; height: calc(100vh - 56px); }
       .toolbar { min-height: 56px; }
-    }
-    @media (max-width: 600px) {
-      .toolbar-title { font-size: 0.85rem; max-width: 140px; }
-      .content { padding: 0.75rem; }
     }
   `],
 })
 export class AdminComponent {
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
 
@@ -121,6 +121,13 @@ export class AdminComponent {
 
   constructor() {
     this.businessName = this.auth.user()?.businessName || 'Panel Admin';
+  }
+
+  formatTime(seconds: number | null): string {
+    if (!seconds || seconds <= 0) return '';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
   confirmLogout(): void {

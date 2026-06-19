@@ -24,7 +24,15 @@ export class ServiceService {
     return this.api.post<ServiceModel>('/services', request);
   }
 
+  activate(id: string): Observable<void> {
+    return this.api.patch<void>(`/services/${id}/activate`, {});
+  }
+
   deactivate(id: string): Observable<void> {
     return this.api.patch<void>(`/services/${id}/deactivate`, {});
+  }
+
+  delete(id: string): Observable<void> {
+    return this.api.delete<void>(`/services/${id}`);
   }
 }

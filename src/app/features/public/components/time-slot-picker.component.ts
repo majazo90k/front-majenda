@@ -31,6 +31,7 @@ interface SlotGroup {
               [class.avail]="slot.isAvailable && !slot.isBlocked"
               [class.taken]="!slot.isAvailable && !slot.isBlocked"
               [class.blocked]="slot.isBlocked"
+              [class.soon]="slot.isAvailable && isSoon(slot)"
               [class.active]="selectedSlot === slot"
               [disabled]="!slot.isAvailable || slot.isBlocked"
               (click)="selectSlot(slot)">
@@ -41,6 +42,7 @@ interface SlotGroup {
 
         <div class="legend">
           <span><span class="dot avail"></span> Disponible</span>
+          <span><span class="dot soon"></span> Próximamente</span>
           <span><span class="dot taken"></span> Ocupado</span>
         </div>
       </ng-container>
@@ -66,12 +68,17 @@ interface SlotGroup {
     .slot-btn.avail:hover { border-color: #6366f1; background: #eef2ff; }
     .slot-btn.taken { background: #fef2f2; color: #ef4444; text-decoration: line-through; cursor: not-allowed; opacity: 0.45; }
     .slot-btn.blocked { background: #f8fafc; color: #94a3b8; cursor: not-allowed; opacity: 0.4; }
+    .slot-btn:not(:disabled):active { transform: scale(0.95); }
     .slot-btn.active { border-color: #6366f1; background: #6366f1; color: #fff; font-weight: 700; }
+    .slot-btn.active.soon { border-color: #6366f1; background: #6366f1; color: #fff; }
+    .slot-btn.soon { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+    .slot-btn.soon:hover { border-color: #d97706; background: #fef3c7; }
     .empty-slots { text-align: center; padding: 2rem; color: #64748b; }
-    .legend { display: flex; gap: 1.5rem; justify-content: center; margin-top: 0.75rem; font-size: 0.8rem; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; vertical-align: middle; }
-    .dot.avail { background: #eef2ff; border: 1px solid #6366f1; }
-    .dot.taken { background: #fef2f2; border: 1px solid #ef4444; }
+    .legend { display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; font-size: 0.9rem; flex-wrap: wrap; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-right: 0.4rem; vertical-align: middle; }
+    .dot.avail { background: #eef2ff; border: 2px solid #6366f1; }
+    .dot.soon { background: #fffbeb; border: 2px solid #f59e0b; }
+    .dot.taken { background: #fef2f2; border: 2px solid #ef4444; }
 
     @media (max-width: 600px) {
       .slot-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 0.35rem; }
@@ -100,5 +107,10 @@ export class TimeSlotPickerComponent {
 
   selectSlot(slot: TimeSlot): void {
     this.slotSelected.emit(slot);
+  }
+
+  isSoon(slot: TimeSlot): boolean {
+    const diff = new Date(slot.start).getTime() - Date.now();
+    return diff > 0 && diff < 30 * 60 * 1000;
   }
 }

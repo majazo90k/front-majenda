@@ -5,6 +5,7 @@ export interface Staff {
   phone: string;
   role: string;
   active: boolean;
+  schedule?: Record<string, { start: string; end: string }[]>;
 }
 
 export interface CreateStaffRequest {

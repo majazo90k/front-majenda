@@ -63,7 +63,7 @@ import { StaffScheduleEditorComponent } from './staff-schedule-editor.component'
             </p>
           </mat-card-content>
           <mat-card-actions align="end">
-            <button mat-icon-button color="primary" (click)="editSchedule(s)" matTooltip="Horario"><mat-icon>schedule</mat-icon></button>
+            <button mat-icon-button color="primary" *ngIf="s.active" (click)="editSchedule(s)" matTooltip="Horario"><mat-icon>schedule</mat-icon></button>
             <button mat-icon-button color="primary" *ngIf="!s.active" (click)="activateStaff(s)" matTooltip="Activar"><mat-icon>person_add</mat-icon></button>
             <button mat-icon-button color="warn" *ngIf="s.active" (click)="deactivateStaff(s)" matTooltip="Desactivar"><mat-icon>block</mat-icon></button>
             <button mat-icon-button color="warn" (click)="deleteStaff(s)" matTooltip="Eliminar"><mat-icon>delete</mat-icon></button>
@@ -73,6 +73,7 @@ import { StaffScheduleEditorComponent } from './staff-schedule-editor.component'
     </div>
   `,
   styles: [`
+    .personal { padding: 0 1.5rem; }
     .personal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
     .personal-header h1 { margin: 0; }
     .staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
@@ -81,6 +82,7 @@ import { StaffScheduleEditorComponent } from './staff-schedule-editor.component'
     .status-badge.active { background: #d1fae5; color: #065f46; }
     .status-badge.inactive { background: #fee2e2; color: #991b1b; }
     @media (max-width: 600px) {
+      .personal { padding: 0 1rem; }
       .personal-header { flex-direction: column; gap: 0.75rem; align-items: stretch; }
       .personal-header h1 { text-align: center; }
       .personal-header button { width: 100%; }
