@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, viewChild } from '@angular/core';
+import { Component, inject, computed, signal, viewChild, effect } from '@angular/core';
 import { NgIf, NgFor, DecimalPipe } from '@angular/common';
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
@@ -100,7 +100,7 @@ export interface BookingData {
             <div class="step-body">
               <p class="step-title">Elige día y horario</p>
               <app-booking-calendar [selectedDate]="booking().date" (dateSelected)="onDateSelected($event)"></app-booking-calendar>
-              <app-time-slot-picker [slots]="availableSlots()" [selectedSlot]="booking().slot" (slotSelected)="selectSlot($event)"></app-time-slot-picker>
+              <app-time-slot-picker [slots]="availableSlots()" [selectedSlot]="booking().slot" [selectedDate]="booking().date" (slotSelected)="selectSlot($event)"></app-time-slot-picker>
               <div class="step-actions step-actions-between">
                 <button mat-stroked-button (click)="stepper.previous()"><mat-icon>chevron_left</mat-icon> Atrás</button>
                 <button mat-raised-button color="primary" [disabled]="!booking().date || !booking().slot" (click)="nextStepDate(stepper)">Siguiente <mat-icon>chevron_right</mat-icon></button>
@@ -205,6 +205,9 @@ export class PublicBookingComponent {
 
   confirmedBooking = signal<BookingData | null>(this.loadConfirmed());
 
+  private loadingSlots = false;
+  private advanceQueue = false;
+
   constructor() {
     this.serviceService.getActive().subscribe((s) => {
       this.services.set(s);
@@ -214,6 +217,27 @@ export class PublicBookingComponent {
       this.staff.set(s);
       if (s.length === 1) this.booking.update((b) => ({ ...b, staff: s[0] }));
       this.loadSlots(this.booking().date!);
+    });
+
+    effect(() => {
+      if (this.advanceQueue) return;
+      const staff = this.booking().staff;
+      const slots = this.availableSlots();
+      const date = this.booking().date;
+      const loading = this.loadingSlots;
+      if (!staff || !date || loading) return;
+      if (slots.length > 0) return;
+
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const day = new Date(date); day.setHours(0, 0, 0, 0);
+      const diff = Math.round((day.getTime() - today.getTime()) / 86400000);
+      if (diff >= 7) return;
+
+      this.advanceQueue = true;
+      const next = new Date(date);
+      next.setDate(next.getDate() + 1);
+      this.booking.update((b) => ({ ...b, date: next, slot: null }));
+      this.loadSlots(next);
     });
   }
 
@@ -283,7 +307,7 @@ export class PublicBookingComponent {
     const b = this.booking();
     if (!b.service || !b.staff || !b.slot || !b.client) return;
 
-    const startStr = new Date((b.slot.start.endsWith('Z') ? b.slot.start : b.slot.start + 'Z')).toISOString();
+    const startStr = (b.slot.start.endsWith('Z') ? b.slot.start : b.slot.start + 'Z').split('.')[0];
 
     this.api.post('/appointments', {
       clientName: b.client.name,
@@ -298,12 +322,24 @@ export class PublicBookingComponent {
         this.saveConfirmed(b);
       },
       error: (err: any) => {
-        const isRateLimit = err?.status === 429;
-        const msg = isRateLimit
-          ? 'Ya agendaste una cita hace menos de 5 minutos. Espera un poco antes de agendar otra.'
-          : 'No se pudo agendar la cita. Intenta de nuevo.';
+        const status = err?.status;
+        let msg: string;
+        let title: string;
+        if (status === 429) {
+          title = 'Demasiadas solicitudes';
+          msg = 'Ya agendaste una cita hace menos de 5 minutos. Espera un poco antes de agendar otra.';
+        } else if (status === 500) {
+          title = 'Error del servidor';
+          msg = 'Ocurrió un problema en el servidor. Intenta de nuevo más tarde. Si el error persiste, contacta al administrador.';
+        } else if (status === 0 || status === 504) {
+          title = 'Sin conexión';
+          msg = 'No se pudo conectar con el servidor. Revisa tu conexión a internet e intenta de nuevo.';
+        } else {
+          title = 'Error';
+          msg = 'No se pudo agendar la cita. Intenta de nuevo.';
+        }
         this.dialog.open(ConfirmDialogComponent, {
-          data: { title: 'Error', message: msg, icon: 'error_outline', variant: 'danger', confirmText: 'Aceptar', cancelText: undefined },
+          data: { title, message: msg, icon: 'error_outline', variant: status === 500 ? 'danger' : 'warning', confirmText: 'Aceptar', cancelText: undefined },
         }).afterClosed().subscribe(() => this.resetBooking());
       },
     });
@@ -333,11 +369,14 @@ export class PublicBookingComponent {
     const staffId = this.booking().staff?.id;
     if (!staffId) return;
 
+    this.loadingSlots = true;
     const dateStr = date.toISOString().split('T')[0];
     const params = new HttpParams().set('staffId', staffId).set('date', dateStr);
 
     this.api.get<{ start: string; end: string }[]>('/availability', params).subscribe((slots) => {
       this.availableSlots.set(slots.map((s) => ({ ...s, isAvailable: true, isBlocked: false })));
+      this.loadingSlots = false;
+      this.advanceQueue = false;
     });
   }
 }

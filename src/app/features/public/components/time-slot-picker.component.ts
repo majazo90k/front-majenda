@@ -16,7 +16,7 @@ interface SlotGroup {
     <div class="slot-wrap">
 
       <div *ngIf="slots.length === 0" class="empty-slots">
-        <p>Selecciona un día para ver los horarios disponibles.</p>
+        <p>{{ emptyMessage }}</p>
       </div>
 
       <ng-container *ngIf="slots.length > 0">
@@ -89,7 +89,18 @@ interface SlotGroup {
 export class TimeSlotPickerComponent {
   @Input({ required: true }) slots: TimeSlot[] = [];
   @Input() selectedSlot: TimeSlot | null = null;
+  @Input() selectedDate: Date | null = null;
   @Output() slotSelected = new EventEmitter<TimeSlot>();
+
+  get emptyMessage(): string {
+    if (!this.selectedDate) return 'Selecciona un día para ver los horarios disponibles.';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const day = new Date(this.selectedDate); day.setHours(0, 0, 0, 0);
+    const diff = Math.round((day.getTime() - today.getTime()) / 86400000);
+    if (diff < 0) return 'No puedes agendar en fechas pasadas.';
+    if (diff === 0) return 'No hay más horarios disponibles para hoy. Selecciona otro día.';
+    return 'No hay horarios disponibles para este día. El profesional no trabaja esta fecha.';
+  }
 
   get groups(): SlotGroup[] {
     const parseDate = (s: string) => new Date(s.endsWith('Z') ? s : s + 'Z');
