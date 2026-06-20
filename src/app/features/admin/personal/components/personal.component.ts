@@ -124,7 +124,7 @@ export class PersonalComponent implements OnInit {
   editSchedule(staff: Staff): void {
     this.dialog.open(StaffScheduleEditorComponent, {
       data: staff,
-      width: '500px',
+      maxWidth: '95vw',
     }).afterClosed().subscribe((changed) => {
       if (changed) this.loadStaff();
     });

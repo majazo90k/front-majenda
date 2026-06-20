@@ -70,24 +70,19 @@ export interface ScheduleData {
     </div>
   `,
   styles: [`
-    .schedule-dialog { padding: 1.5rem; min-width: 420px; }
-    .schedule-dialog h2 { margin: 0 0 0.25rem; padding-right: 1rem; }
+    .schedule-dialog { padding: 1.5rem; }
+    .schedule-dialog h2 { margin: 0 0 0.25rem; }
     .subtitle { color: #6b7280; font-size: 0.875rem; margin: 0 0 1.25rem; }
-    .day-list { max-height: 400px; overflow-y: auto; }
+    .day-list { max-height: 60vh; overflow-y: auto; }
     .day-row { display: flex; align-items: center; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid #f3f4f6; }
-    .time-selects { display: flex; gap: 0.5rem; margin-left: auto; }
-    .time-selects mat-form-field { width: 130px; }
+    .time-selects { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; }
     .actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
-    @media (min-width: 1200px) {
-      .time-selects mat-form-field { width: 150px; }
-      .schedule-dialog { min-width: 520px; }
-    }
     @media (max-width: 600px) {
-      .schedule-dialog { min-width: unset; padding: 1rem; }
-      .day-list { max-height: 300px; }
+      .schedule-dialog { padding: 1rem; }
+      .day-list { max-height: 50vh; }
       .day-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
       .time-selects { margin-left: 0; width: 100%; }
-      .time-selects mat-form-field { flex: 1; width: auto; }
+      .time-selects mat-form-field { flex: 1; }
       .actions { position: sticky; bottom: 0; background: white; padding-top: 0.75rem; }
       .actions button { width: 100%; }
     }

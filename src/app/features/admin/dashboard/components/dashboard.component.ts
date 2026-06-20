@@ -3,6 +3,7 @@ import { NgIf, NgFor, DecimalPipe } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
 import { AppointmentService } from '../../../../core/services/appointment.service';
 import { ServiceService } from '../../../../core/services/service.service';
+import { StaffService } from '../../../../core/services/staff.service';
 import { Appointment, ServiceModel } from '../../../../core/models';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner.component';
 
@@ -54,7 +55,7 @@ interface PeriodStats {
               <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingresos</span>
             </div>
             <div class="text-2xl font-bold text-gray-900">\${{ stats().revenue | number:'1.0-0' }}</div>
-            <div class="text-xs text-gray-400 mt-1">{{ stats().completed }} completadas</div>
+            <div class="text-xs text-gray-400 mt-1">{{ stats().completed }} completadas · {{ staffCount() }} profesionales</div>
           </div>
 
           <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -199,6 +200,7 @@ interface PeriodStats {
 export class DashboardComponent implements OnInit, OnDestroy {
   private appointmentService = inject(AppointmentService);
   private serviceService = inject(ServiceService);
+  private staffService = inject(StaffService);
   private refreshTimer?: ReturnType<typeof setInterval>;
 
   private services: ServiceModel[] = [];
@@ -216,6 +218,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   pendingCount = signal(0);
   cancelledCount = signal(0);
   avgTicket = signal(0);
+  staffCount = signal(0);
   todayAppointments = signal<Appointment[]>([]);
   todayFilter = signal<string>('ALL');
 
@@ -276,12 +279,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadData();
-    this.refreshTimer = setInterval(() => this.loadData(), 15000);
   }
 
-  ngOnDestroy(): void {
-    clearInterval(this.refreshTimer);
-  }
+  ngOnDestroy(): void {}
 
   exportCSV(): void {
     const rows = this.allAppointments
@@ -310,6 +310,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadData(): void {
+    this.staffService.getAll().subscribe((s) => this.staffCount.set(s.length));
     this.serviceService.getAll().subscribe((s) => {
       this.services = s;
     });

@@ -26,7 +26,7 @@ interface CalendarDay {
   standalone: true,
   imports: [NgFor, NgIf, DatePipe, MatButtonModule, MatIconModule, MatTooltipModule, LoadingSpinnerComponent],
   template: `
-    <div class="p-4 md:p-6 space-y-6">
+    <div class="p-4 md:p-8 space-y-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Agenda</h1>
         <span class="text-sm text-gray-400">{{ selectedDate() | date:'fullDate' }}</span>
@@ -84,27 +84,27 @@ interface CalendarDay {
               <p class="text-gray-400 text-sm">No hay citas para este día</p>
             </div>
 
-            <div class="space-y-1.5 max-h-[520px] overflow-y-auto pr-1">
+            <div class="space-y-2 max-h-[520px] overflow-y-auto pr-1">
               <div *ngFor="let apt of dayAppointments()"
                 class="flex items-stretch gap-0 rounded-xl overflow-hidden border border-gray-100 bg-white hover:shadow-sm transition-shadow">
 
                 <!-- Time column -->
-                <div class="flex flex-col items-center justify-center w-16 flex-shrink-0 bg-gray-50 py-2">
-                  <span class="text-sm font-bold text-gray-800 leading-tight">{{ formatTime(apt.startTime) }}</span>
-                  <span class="text-[10px] text-gray-400 leading-tight">{{ formatTime(apt.endTime) }}</span>
+                <div class="flex flex-col items-center justify-center w-20 flex-shrink-0 bg-gray-50 py-3">
+                  <span class="text-sm font-bold text-gray-800">{{ formatTime(apt.startTime) }}</span>
+                  <span class="text-xs text-gray-400 mt-0.5">{{ formatTime(apt.endTime) }}</span>
                 </div>
 
                 <!-- Color bar -->
-                <div class="w-1 flex-shrink-0" [class.bg-amber-400]="apt.status === 'PENDING'"
+                <div class="w-1.5 flex-shrink-0" [class.bg-amber-400]="apt.status === 'PENDING'"
                   [class.bg-indigo-400]="apt.status === 'CONFIRMED'"
                   [class.bg-emerald-400]="apt.status === 'COMPLETED'"
                   [class.bg-rose-300]="apt.status === 'CANCELLED'"></div>
 
                 <!-- Content -->
-                <div class="flex-1 min-w-0 px-3 py-2">
-                  <div class="flex items-center gap-1.5">
+                <div class="flex-1 min-w-0 px-4 py-3">
+                  <div class="flex items-center gap-2">
                     <span class="font-semibold text-sm text-gray-900 truncate">{{ apt.clientName }}</span>
-                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0"
+                    <span class="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
                       [class.bg-amber-100]="apt.status === 'PENDING'" [class.text-amber-700]="apt.status === 'PENDING'"
                       [class.bg-indigo-100]="apt.status === 'CONFIRMED'" [class.text-indigo-700]="apt.status === 'CONFIRMED'"
                       [class.bg-emerald-100]="apt.status === 'COMPLETED'" [class.text-emerald-700]="apt.status === 'COMPLETED'"
@@ -112,23 +112,23 @@ interface CalendarDay {
                       {{ statusLabel(apt.status) }}
                     </span>
                   </div>
-                  <p class="text-[11px] text-gray-500 mt-0.5 truncate">{{ apt.serviceName }} · {{ apt.staffName }}</p>
-                  <p class="text-[11px] text-gray-400 truncate">{{ apt.clientPhone }}</p>
+                  <p class="text-xs text-gray-500 mt-1 truncate">{{ apt.serviceName }} · {{ apt.staffName }}</p>
+                  <p class="text-xs text-gray-400 truncate">{{ apt.clientPhone }}</p>
                 </div>
 
                 <!-- Actions always visible -->
-                <div class="flex items-center gap-0.5 pr-2 flex-shrink-0 bg-white">
+                <div class="flex items-center gap-0.5 pr-3 flex-shrink-0 bg-white">
                   <button mat-icon-button matTooltip="Confirmar" *ngIf="apt.status === 'PENDING'"
-                    class="!w-7 !h-7 hover:bg-emerald-50" (click)="changeStatus(apt.id, 'CONFIRMED')">
-                    <mat-icon class="!text-base !text-emerald-500">check_circle</mat-icon>
+                    class="!w-8 !h-8 hover:bg-emerald-50" (click)="changeStatus(apt.id, 'CONFIRMED')">
+                    <mat-icon class="!text-lg !text-emerald-500">check_circle</mat-icon>
                   </button>
                   <button mat-icon-button matTooltip="Completar" *ngIf="apt.status === 'CONFIRMED'"
-                    class="!w-7 !h-7 hover:bg-blue-50" (click)="changeStatus(apt.id, 'COMPLETED')">
-                    <mat-icon class="!text-base !text-blue-500">task_alt</mat-icon>
+                    class="!w-8 !h-8 hover:bg-blue-50" (click)="changeStatus(apt.id, 'COMPLETED')">
+                    <mat-icon class="!text-lg !text-blue-500">task_alt</mat-icon>
                   </button>
                   <button mat-icon-button matTooltip="Cancelar" *ngIf="apt.status !== 'CANCELLED' && apt.status !== 'COMPLETED'"
-                    class="!w-7 !h-7 hover:bg-rose-50" (click)="cancelAppointment(apt)">
-                    <mat-icon class="!text-base !text-rose-400">cancel</mat-icon>
+                    class="!w-8 !h-8 hover:bg-rose-50" (click)="cancelAppointment(apt)">
+                    <mat-icon class="!text-lg !text-rose-400">cancel</mat-icon>
                   </button>
                 </div>
               </div>
