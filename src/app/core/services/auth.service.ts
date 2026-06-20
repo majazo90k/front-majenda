@@ -1,5 +1,5 @@
-import { Injectable, signal, computed, OnDestroy, inject } from '@angular/core';
-import { Observable, tap, interval, Subscription } from 'rxjs';
+import { Injectable, signal, computed, OnDestroy, inject, NgZone } from '@angular/core';
+import { Observable, tap, interval, Subscription, fromEvent, merge } from 'rxjs';
 import { LoginRequest, LoginResponse, AuthState } from '../models';
 import { ApiService } from './api.service';
 
@@ -29,7 +29,10 @@ function decodeToken(token: string): { exp: number } | null {
 export class AuthService implements OnDestroy {
 
   private api = inject(ApiService);
+  private zone = inject(NgZone);
+  readonly ready = signal(false);
   private expireTimer?: Subscription;
+  private idleTimer?: Subscription;
 
   private readonly state = signal<AuthState>({
     token: getItem(TOKEN_KEY),
@@ -59,7 +62,11 @@ export class AuthService implements OnDestroy {
   });
 
   constructor() {
-    if (this.state().token) this.startExpireTimer();
+    if (this.state().token) {
+      this.startExpireTimer();
+      this.startIdleTimer();
+    }
+    setTimeout(() => this.ready.set(true));
   }
 
   ngOnDestroy(): void {
@@ -68,12 +75,13 @@ export class AuthService implements OnDestroy {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.api.post<LoginResponse>('/auth/login', request).pipe(
-      tap((res) => {
+      tap((res: LoginResponse) => {
         setItem(TOKEN_KEY, res.token);
         setItem(EMAIL_KEY, res.email);
         setItem(NAME_KEY, res.name);
         this.state.set({ token: res.token, email: res.email, isAuthenticated: true });
         this.startExpireTimer();
+        this.startIdleTimer();
       })
     );
   }
@@ -85,6 +93,26 @@ export class AuthService implements OnDestroy {
     this.state.set({ token: null, email: null, isAuthenticated: false });
     this.expiresIn.set(null);
     this.expireTimer?.unsubscribe();
+    this.idleTimer?.unsubscribe();
+  }
+
+  private startIdleTimer(): void {
+    this.idleTimer?.unsubscribe();
+    const events = merge(
+      fromEvent(document, 'click'),
+      fromEvent(document, 'keydown'),
+      fromEvent(document, 'touchstart'),
+      fromEvent(document, 'scroll'),
+    );
+    let idleTimeout: ReturnType<typeof setTimeout>;
+    const reset = () => {
+      clearTimeout(idleTimeout);
+      idleTimeout = setTimeout(() => {
+        this.zone.run(() => this.logout());
+      }, 30 * 60 * 1000);
+    };
+    this.idleTimer = events.subscribe(reset);
+    reset();
   }
 
   private startExpireTimer(): void {

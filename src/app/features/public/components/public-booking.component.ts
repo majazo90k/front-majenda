@@ -43,8 +43,7 @@ export interface BookingData {
         </div>
 
         <div *ngIf="confirmedBooking() as confirmed" class="confirmed-banner">
-          <app-booking-confirmation [booking]="confirmed" [isConfirmed]="true"></app-booking-confirmation>
-          <div class="text-center mt-4"><button mat-stroked-button (click)="clearConfirmed()">Agendar nueva cita</button></div>
+          <app-booking-confirmation [booking]="confirmed" [isConfirmed]="true" (newBooking)="clearConfirmed()"></app-booking-confirmation>
         </div>
 
         <mat-stepper *ngIf="!confirmedBooking()" linear #stepper class="booking-stepper" [attr.data-key]="bookingKey()">
@@ -63,7 +62,7 @@ export interface BookingData {
               </div>
               <div class="grid-2cols" *ngIf="filteredServices().length > 0">
                 <button *ngFor="let s of filteredServices()" mat-stroked-button class="option-card" [class.selected]="booking().service?.id === s.id" (click)="selectService(s)">
-                  <mat-icon>content_cut</mat-icon>
+                  <mat-icon>{{ categoryIcon(s.category) }}</mat-icon>
                   <div class="option-name">{{ s.name }}</div>
                   <div class="option-detail">{{ s.durationMinutes }} min</div>
                   <div class="option-price">\${{ s.priceCLP | number:'1.0-0':'es-CL' }}</div>
@@ -122,7 +121,7 @@ export interface BookingData {
           <mat-step [editable]="false">
             <ng-template matStepLabel><span class="step-label-text">Confirmar</span></ng-template>
             <div class="step-body">
-              <app-booking-confirmation [booking]="booking()" [isConfirmed]="isConfirmed()" (confirm)="onConfirm()" (cancel)="resetBooking()"></app-booking-confirmation>
+              <app-booking-confirmation [booking]="booking()" [isConfirmed]="isConfirmed()" (confirm)="onConfirm()" (cancel)="resetBooking()" (newBooking)="clearConfirmed()"></app-booking-confirmation>
             </div>
           </mat-step>
         </mat-stepper>
@@ -146,7 +145,7 @@ export interface BookingData {
     .option-card { display: flex; flex-direction: column !important; align-items: center; gap: 0.5rem; padding: 1.75rem 1rem; height: auto; white-space: normal; line-height: 1.4; border-radius: 12px; border: 2px solid #e2e8f0; transition: all 0.2s; background: white; cursor: pointer; }
     .option-card:hover { border-color: #818cf8; background: #eef2ff; }
     .option-card.selected { border-color: #6366f1; background: #eef2ff; }
-    .option-card mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: #6366f1; }
+    .option-card mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: #6366f1; display:flex; align-items:center; justify-content:center; }
     .option-name { font-weight: 700; font-size: 1.05rem; color: #1e293b; margin-top: 0.25rem; }
     .option-detail { font-size: 0.85rem; color: #64748b; }
     .option-price { font-size: 1.15rem; font-weight: 800; color: #059669; margin-top: 0.15rem; }
@@ -239,6 +238,11 @@ export class PublicBookingComponent {
       this.booking.update((b) => ({ ...b, date: next, slot: null }));
       this.loadSlots(next);
     });
+  }
+
+  categoryIcon(cat: string): string {
+    const icons: Record<string, string> = { CORTE: 'content_cut', TINTURA: 'palette', PROMOCION: 'local_offer' };
+    return icons[cat] || 'content_cut';
   }
 
   selectService(service: ServiceModel): void {

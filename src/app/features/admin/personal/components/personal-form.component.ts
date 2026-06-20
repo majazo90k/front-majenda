@@ -1,8 +1,10 @@
 import { Component, EventEmitter, Output, inject, OnInit } from '@angular/core';
+import { NgFor } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { StaffService } from '../../../../core/services/staff.service';
 import { Staff, CreateStaffRequest } from '../../../../core/models';
@@ -10,7 +12,7 @@ import { Staff, CreateStaffRequest } from '../../../../core/models';
 @Component({
   selector: 'app-personal-form',
   standalone: true,
-  imports: [ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [NgFor, ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule],
   template: `
     <mat-card class="form-card">
       <mat-card-header>
@@ -35,7 +37,9 @@ import { Staff, CreateStaffRequest } from '../../../../core/models';
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Rol</mat-label>
-            <input matInput formControlName="role" placeholder="Estilista, Barbero, etc.">
+            <mat-select formControlName="role">
+              <mat-option *ngFor="let r of roles" [value]="r">{{ r }}</mat-option>
+            </mat-select>
           </mat-form-field>
 
           <div class="form-actions">
@@ -59,6 +63,8 @@ import { Staff, CreateStaffRequest } from '../../../../core/models';
 export class PersonalFormComponent {
   private fb = inject(FormBuilder);
   private staffService = inject(StaffService);
+
+  readonly roles = ['Estilista', 'Barbero', 'Manicurista', 'Peluquero/a', 'Masajista', 'Recepcionista', 'Otro'];
 
   @Output() saved = new EventEmitter<Staff>();
   @Output() cancelled = new EventEmitter<void>();

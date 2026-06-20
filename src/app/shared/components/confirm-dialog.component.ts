@@ -32,9 +32,9 @@ export interface ConfirmData {
       </div>
       <h2 class="text-lg font-bold text-gray-900 mb-2">{{ data.title }}</h2>
       <p class="text-sm text-gray-500 mb-6">{{ data.message }}</p>
-      <div class="flex gap-3 justify-center">
-        <button mat-stroked-button (click)="dialogRef.close(false)" class="!px-5">
-          {{ data.cancelText || 'Cancelar' }}
+      <div class="flex gap-3 justify-center" [class.flex-col]="!data.cancelText">
+        <button *ngIf="data.cancelText !== undefined" mat-stroked-button (click)="dialogRef.close(false)" class="!px-5">
+          {{ data.cancelText }}
         </button>
         <button mat-raised-button (click)="dialogRef.close(true)" class="!px-5 !text-white"
           [class.!bg-rose-500]="data.variant === 'danger'"

@@ -51,7 +51,7 @@ import { ServiceModel, ServiceCategory, CreateServiceRequest } from '../../../..
 
           <div class="form-actions">
             <button mat-stroked-button type="button" (click)="cancelled.emit()">Cancelar</button>
-            <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+            <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || submitting">
               {{ service ? 'Actualizar' : 'Crear' }}
             </button>
           </div>
@@ -99,8 +99,11 @@ export class ServicioFormComponent implements OnInit {
     }
   }
 
+  submitting = false;
+
   onSubmit(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.submitting) return;
+    this.submitting = true;
     const data = this.form.getRawValue();
 
     const request: CreateServiceRequest = {
@@ -111,8 +114,12 @@ export class ServicioFormComponent implements OnInit {
       priceCLP: data.priceCLP,
     };
 
-    this.serviceService.create(request).subscribe((result) => {
-      this.saved.emit(result);
+    const obs = this.service
+      ? this.serviceService.update(this.service.id, request)
+      : this.serviceService.create(request);
+    obs.subscribe({
+      next: (result) => { this.submitting = false; this.saved.emit(result); },
+      error: () => { this.submitting = false; },
     });
   }
 }

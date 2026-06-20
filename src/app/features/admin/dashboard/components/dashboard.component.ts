@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, ElementRef, viewChild, afterNextRender } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, ElementRef, viewChild, afterNextRender } from '@angular/core';
 import { NgIf, NgFor, DecimalPipe } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
 import { AppointmentService } from '../../../../core/services/appointment.service';
@@ -22,49 +22,54 @@ interface PeriodStats {
   imports: [NgIf, NgFor, DecimalPipe, LoadingSpinnerComponent],
   template: `
     <div class="p-4 md:p-6 space-y-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p class="text-gray-500 text-sm mt-1">Resumen de actividad de tu negocio</p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p class="text-gray-500 text-sm mt-1">Resumen de actividad de tu negocio</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button (click)="exportCSV()" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 flex items-center gap-1">
+              📥 Exportar CSV (Backup)
+            </button>
+            <div class="flex gap-1 bg-white rounded-xl p-1 shadow-sm border border-gray-200">
+              <button *ngFor="let p of periods" (click)="selectPeriod(p.value)"
+                class="px-3 py-1.5 text-sm font-medium rounded-lg transition-all"
+                [class.bg-indigo-600]="selectedPeriod() === p.value"
+                [class.text-white]="selectedPeriod() === p.value"
+                [class.text-gray-600]="selectedPeriod() !== p.value"
+                [class.hover:bg-gray-100]="selectedPeriod() !== p.value">
+                {{ p.label }}
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="flex gap-1 bg-white rounded-xl p-1 shadow-sm border border-gray-200">
-          <button *ngFor="let p of periods" (click)="selectPeriod(p.value)"
-            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-all"
-            [class.bg-indigo-600]="selectedPeriod() === p.value"
-            [class.text-white]="selectedPeriod() === p.value"
-            [class.text-gray-600]="selectedPeriod() !== p.value"
-            [class.hover:bg-gray-100]="selectedPeriod() !== p.value">
-            {{ p.label }}
-          </button>
-        </div>
-      </div>
 
       <app-loading-spinner *ngIf="loading()" [loading]="true" text="Cargando dashboard..." />
 
       <ng-container *ngIf="!loading()">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center"><span class="text-xl">💰</span></div>
-              <span class="text-xs font-medium text-gray-400">Ingresos</span>
+              <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingresos</span>
             </div>
             <div class="text-2xl font-bold text-gray-900">\${{ stats().revenue | number:'1.0-0' }}</div>
-            <div class="text-xs text-gray-400 mt-1">{{ stats().completed }} servicios completados</div>
+            <div class="text-xs text-gray-400 mt-1">{{ stats().completed }} completadas</div>
           </div>
 
           <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center"><span class="text-xl">✅</span></div>
-              <span class="text-xs font-medium text-gray-400">Completadas</span>
+              <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Completadas</span>
             </div>
             <div class="text-2xl font-bold text-gray-900">{{ stats().completed }}</div>
-            <div class="text-xs text-gray-400 mt-1">de {{ stats().total }} citas totales</div>
+            <div class="text-xs text-gray-400 mt-1">servicios realizados</div>
           </div>
 
           <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center"><span class="text-xl">⏳</span></div>
-              <span class="text-xs font-medium text-gray-400">Pendientes</span>
+              <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Pendientes</span>
             </div>
             <div class="text-2xl font-bold text-gray-900">{{ pendingCount() }}</div>
             <div class="text-xs text-gray-400 mt-1">por confirmar</div>
@@ -72,11 +77,20 @@ interface PeriodStats {
 
           <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center"><span class="text-xl">❌</span></div>
+              <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Canceladas</span>
+            </div>
+            <div class="text-2xl font-bold text-gray-900">{{ cancelledCount() }}</div>
+            <div class="text-xs text-gray-400 mt-1">citas canceladas</div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3 mb-3">
               <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center"><span class="text-xl">📈</span></div>
-              <span class="text-xs font-medium text-gray-400">Valor promedio</span>
+              <span class="text-xs font-medium text-gray-400">Ticket promedio</span>
             </div>
             <div class="text-2xl font-bold text-gray-900">\${{ avgTicket() | number:'1.0-0':'es-CL' }}</div>
-            <div class="text-xs text-gray-400 mt-1">\$ por cita</div>
+            <div class="text-xs text-gray-400 mt-1">por cita completada</div>
           </div>
         </div>
 
@@ -182,9 +196,10 @@ interface PeriodStats {
     </div>
   `,
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private appointmentService = inject(AppointmentService);
   private serviceService = inject(ServiceService);
+  private refreshTimer?: ReturnType<typeof setInterval>;
 
   private services: ServiceModel[] = [];
   private allAppointments: Appointment[] = [];
@@ -199,6 +214,7 @@ export class DashboardComponent implements OnInit {
 
   stats = signal<PeriodStats>({ total: 0, completed: 0, revenue: 0, serviceCounts: {}, serviceRevenue: {} });
   pendingCount = signal(0);
+  cancelledCount = signal(0);
   avgTicket = signal(0);
   todayAppointments = signal<Appointment[]>([]);
   todayFilter = signal<string>('ALL');
@@ -260,6 +276,31 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+    this.refreshTimer = setInterval(() => this.loadData(), 15000);
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.refreshTimer);
+  }
+
+  exportCSV(): void {
+    const rows = this.allAppointments
+      .filter((a) => a.status === 'COMPLETED')
+      .map((a) => {
+        const serviceName = a.serviceName || this.services.find((s) => s.id === a.serviceId)?.name || '-';
+        const price = this.services.find((s) => s.id === a.serviceId)?.priceCLP || 0;
+        return `${a.clientName},${serviceName},${a.staffName},${a.startTime.split('T')[0]},${a.startTime.split('T')[1]?.substring(0, 5) || ''},${price}`;
+      });
+
+    const header = 'Cliente,Servicio,Profesional,Fecha,Hora,Ingreso ($)';
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ingresos_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   selectPeriod(p: 'day' | 'month' | 'year'): void {
@@ -288,21 +329,19 @@ export class DashboardComponent implements OnInit {
 
     const filtered = this.allAppointments.filter((a) => {
       const d = new Date(a.startTime);
-      const completed = a.status === 'COMPLETED' || a.status === 'CONFIRMED';
-      if (!completed) return false;
+      if (a.status !== 'COMPLETED') return false;
       if (period === 'day') return d.toDateString() === now.toDateString();
       if (period === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       return d.getFullYear() === now.getFullYear();
     });
 
     const completed = filtered.filter((a) => a.status === 'COMPLETED');
-    const confirmed = filtered.filter((a) => a.status === 'CONFIRMED');
 
     const counts: Record<string, number> = {};
     const revs: Record<string, number> = {};
     let totalRevenue = 0;
 
-    for (const a of [...completed, ...confirmed]) {
+      for (const a of completed) {
       counts[a.serviceId] = (counts[a.serviceId] || 0) + 1;
       const price = this.services.find((s) => s.id === a.serviceId)?.priceCLP || 0;
       revs[a.serviceId] = (revs[a.serviceId] || 0) + price;
@@ -311,7 +350,8 @@ export class DashboardComponent implements OnInit {
 
     this.stats.set({ total: filtered.length, completed: completed.length, revenue: totalRevenue, serviceCounts: counts, serviceRevenue: revs });
     this.pendingCount.set(this.allAppointments.filter((a) => a.status === 'PENDING').length);
-    this.avgTicket.set(completed.length + confirmed.length > 0 ? Math.round(totalRevenue / (completed.length + confirmed.length)) : 0);
+    this.cancelledCount.set(this.allAppointments.filter((a) => a.status === 'CANCELLED').length);
+    this.avgTicket.set(completed.length > 0 ? Math.round(totalRevenue / completed.length) : 0);
   }
 
   private initCharts(): void {
@@ -330,7 +370,7 @@ export class DashboardComponent implements OnInit {
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const revenue: number[] = Array(12).fill(0);
     for (const a of this.allAppointments) {
-      if (a.status !== 'COMPLETED' && a.status !== 'CONFIRMED') continue;
+      if (a.status !== 'COMPLETED') continue;
       const d = new Date(a.startTime);
       if (d.getFullYear() !== new Date().getFullYear()) continue;
       const price = this.services.find((s) => s.id === a.serviceId)?.priceCLP || 0;

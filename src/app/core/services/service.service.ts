@@ -24,6 +24,10 @@ export class ServiceService {
     return this.api.post<ServiceModel>('/services', request);
   }
 
+  update(id: string, request: CreateServiceRequest): Observable<ServiceModel> {
+    return this.api.patch<ServiceModel>(`/services/${id}`, request);
+  }
+
   activate(id: string): Observable<void> {
     return this.api.patch<void>(`/services/${id}/activate`, {});
   }
