@@ -26,7 +26,12 @@ interface PeriodStats {
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p class="text-gray-500 text-sm mt-1">Resumen de actividad de tu negocio</p>
+            <p class="text-gray-500 text-sm mt-1">
+              Resumen de actividad
+              <span class="inline-flex items-center gap-1 ml-2 text-xs text-gray-400 bg-gray-50 rounded-full px-2.5 py-0.5">
+                🧑‍🤝‍🧑 {{ staffCount() }} miembros
+              </span>
+            </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button (click)="exportCSV()" class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 flex items-center gap-1">
@@ -55,7 +60,7 @@ interface PeriodStats {
               <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingresos</span>
             </div>
             <div class="text-2xl font-bold text-gray-900">\${{ stats().revenue | number:'1.0-0' }}</div>
-            <div class="text-xs text-gray-400 mt-1">{{ stats().completed }} completadas · {{ staffCount() }} profesionales</div>
+            <div class="text-xs text-gray-400 mt-1">{{ stats().completed }} completadas</div>
           </div>
 
           <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -93,6 +98,7 @@ interface PeriodStats {
             <div class="text-2xl font-bold text-gray-900">\${{ avgTicket() | number:'1.0-0':'es-CL' }}</div>
             <div class="text-xs text-gray-400 mt-1">por cita completada</div>
           </div>
+
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

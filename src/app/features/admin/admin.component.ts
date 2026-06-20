@@ -45,7 +45,7 @@ interface NavItem {
       </mat-toolbar>
 
       <mat-sidenav-container class="sidenav-container" (backdropClick)="sidenav.toggle()">
-        <mat-sidenav #sidenav [mode]="isMobile() ? 'over' : 'side'" [opened]="!isMobile()" class="sidenav">
+        <mat-sidenav #sidenav [mode]="isMobile() ? 'over' : 'side'" [opened]="!isMobile()" class="sidenav flex flex-col">
           <mat-nav-list>
             <a
               *ngFor="let item of navItems"
@@ -59,6 +59,9 @@ interface NavItem {
               <span matListItemTitle>{{ item.label }}</span>
             </a>
           </mat-nav-list>
+          <div class="text-center text-[11px] text-gray-300 mt-auto py-4 select-none">
+            Majenda - By majazo
+          </div>
         </mat-sidenav>
 
         <mat-sidenav-content class="content">
