@@ -73,6 +73,8 @@ import { MatButtonModule } from '@angular/material/button';
       cursor: pointer;
       font-size: 0.9rem;
       transition: all 0.15s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .cal-cell.empty { cursor: default; }
     .cal-cell.today { font-weight: 700; border: 2px solid #6366f1; }
