@@ -25,7 +25,7 @@ import { MatButtonModule } from '@angular/material/button';
           [class.available]="day && isAvailable(day)"
           [class.unavailable]="day && !isAvailable(day)"
           (click)="selectDay(day)"
-          [disabled]="!day || !isAvailable(day)">
+          [class.tap-disabled]="!day || !isAvailable(day)">
           {{ day ? (day | date:'d') : '' }}
         </button>
       </div>
@@ -79,7 +79,8 @@ import { MatButtonModule } from '@angular/material/button';
     .cal-cell.selected { background: #6366f1; color: #fff; font-weight: 700; }
     .cal-cell.available { color: #1e293b; }
     .cal-cell.available:hover { background: #eef2ff; }
-    .cal-cell.unavailable { color: #cbd5e1; cursor: not-allowed; }
+    .cal-cell.unavailable { color: #cbd5e1; }
+    .cal-cell.tap-disabled { color: #cbd5e1; cursor: default; }
 
     @media (max-width: 600px) {
       .calendar-wrap { max-width: 100%; }
