@@ -121,7 +121,8 @@ export class TimeSlotPickerComponent {
   }
 
   isSoon(slot: TimeSlot): boolean {
-    const diff = new Date(slot.start).getTime() - Date.now();
+    const d = new Date((slot.start.endsWith('Z') ? slot.start : slot.start + 'Z'));
+    const diff = d.getTime() - Date.now();
     return diff > 0 && diff < 30 * 60 * 1000;
   }
 }

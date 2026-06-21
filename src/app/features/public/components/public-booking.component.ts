@@ -374,7 +374,8 @@ export class PublicBookingComponent {
     if (!staffId) return;
 
     this.loadingSlots = true;
-    const dateStr = date.toISOString().split('T')[0];
+    const d = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    const dateStr = d.toISOString().split('T')[0];
     const params = new HttpParams().set('staffId', staffId).set('date', dateStr);
 
     this.api.get<{ start: string; end: string }[]>('/availability', params).subscribe((slots) => {
